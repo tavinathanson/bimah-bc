@@ -4,8 +4,8 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow access to /enter page
-  if (pathname === "/enter") {
+  // Allow access to /enter page and /enter/api endpoint
+  if (pathname === "/enter" || pathname.startsWith("/enter/")) {
     return NextResponse.next();
   }
 

@@ -25,8 +25,8 @@ export default function EnterPage() {
       });
 
       if (response.ok) {
-        router.push("/upload");
-        router.refresh();
+        // Use window.location for full page reload to ensure cookie is set
+        window.location.href = "/upload";
       } else {
         const data = await response.json();
         setError(data.error || "Invalid passcode");

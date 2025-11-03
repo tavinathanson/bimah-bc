@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,9 +15,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (passcode === correctPasscode) {
-      // Set httpOnly cookie
-      const cookieStore = await cookies();
-      cookieStore.set("bimah_session", "ok", {
+      // Create response with cookie
+      const response = NextResponse.json({ success: true });
+
+      // Set httpOnly cookie using NextResponse cookies API
+      response.cookies.set({
+        name: "bimah_session",
+        value: "ok",
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -26,7 +29,7 @@ export async function POST(request: NextRequest) {
         path: "/",
       });
 
-      return NextResponse.json({ success: true });
+      return response;
     } else {
       return NextResponse.json(
         { error: "Invalid passcode" },

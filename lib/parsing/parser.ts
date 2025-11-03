@@ -123,7 +123,7 @@ export async function parseFile(
 
     // First row is headers
     const firstRow = jsonData[0];
-    if (!firstRow || typeof firstRow !== 'object' || Array.isArray(firstRow)) {
+    if (!firstRow) {
       errors.push({
         row: 0,
         message: "Invalid header row format",
@@ -131,7 +131,8 @@ export async function parseFile(
       return { fileName: file.name, rows, errors };
     }
 
-    const headers = Object.values(firstRow) as unknown[];
+    // When using header: 1, SheetJS returns arrays
+    const headers = Array.isArray(firstRow) ? firstRow : Object.values(firstRow);
     const headerStrings = headers.map((h) => String(h || "").trim());
 
     // Find column indices
@@ -170,10 +171,12 @@ export async function parseFile(
     // Parse data rows (skip header)
     for (let i = 1; i < jsonData.length; i++) {
       const rowData = jsonData[i];
-      if (!rowData || typeof rowData !== 'object' || Array.isArray(rowData)) {
+      if (!rowData) {
         continue; // Skip invalid rows
       }
-      const dataRow = Object.values(rowData) as unknown[];
+
+      // When using header: 1, SheetJS returns arrays
+      const dataRow = Array.isArray(rowData) ? rowData : Object.values(rowData);
       const rowNum = i + 1; // 1-indexed for user display
 
       const ageValue = dataRow[ageIndex];
@@ -274,11 +277,10 @@ export async function getFileHeaders(file: File): Promise<string[]> {
     if (jsonData.length === 0) return [];
 
     const firstRow = jsonData[0];
-    if (!firstRow || typeof firstRow !== 'object' || Array.isArray(firstRow)) {
-      return [];
-    }
+    if (!firstRow) return [];
 
-    const headers = Object.values(firstRow) as unknown[];
+    // When using header: 1, SheetJS returns arrays
+    const headers = Array.isArray(firstRow) ? firstRow : Object.values(firstRow);
     return headers.map((h) => String(h || "").trim()).filter((h) => h !== "");
   } catch {
     return [];

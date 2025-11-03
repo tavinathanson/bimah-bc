@@ -10,7 +10,8 @@
     "lint": "next lint",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "generate-demo": "tsx scripts/generate-demo-data.ts 2>/dev/null > demo-pledges.csv && echo 'Demo file generated: demo-pledges.csv'"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -42,6 +43,7 @@
     "jsdom": "^27.1.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
+    "tsx": "^4.20.6",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }
