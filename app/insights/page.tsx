@@ -86,10 +86,15 @@ export default function InsightsPage() {
               </p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => router.push("/dashboard")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push("/dashboard")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Dashboard
+            </Button>
+            <Button variant="outline" onClick={() => router.push("/forecasts")}>
+              Forecasts
+            </Button>
+          </div>
         </div>
 
         {/* Key Metrics Row */}
@@ -288,30 +293,40 @@ export default function InsightsPage() {
           </CardContent>
         </Card>
 
-        {/* Pledge Volatility */}
+        {/* Pledge Change Behavior */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Pledge Change Volatility</CardTitle>
-            <CardDescription>How much do renewed pledges vary? (current minus prior, renewed only)</CardDescription>
+            <CardTitle className="text-lg md:text-xl">How Much Do Pledges Change?</CardTitle>
+            <CardDescription>Patterns in pledge changes year-over-year (renewed pledgers only)</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-lg border">
-                <div className="text-sm font-medium text-muted-foreground mb-1">Standard Deviation</div>
-                <div className="text-xl font-bold">{formatCurrency(insights.pledgeVolatility.stdDev)}</div>
-                <div className="text-xs text-muted-foreground mt-1">Avg distance from mean change</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-lg border bg-green-50">
+                <div className="text-sm font-medium text-green-900 mb-1">Stable Pledgers</div>
+                <div className="text-2xl font-bold text-green-700">{formatPercent(insights.pledgeChangeBehavior.percentStable)}</div>
+                <div className="text-xs text-green-800 mt-1">Changed by ±10% or less</div>
+              </div>
+
+              <div className="p-4 rounded-lg border bg-orange-50">
+                <div className="text-sm font-medium text-orange-900 mb-1">Significant Changes</div>
+                <div className="text-2xl font-bold text-orange-700">{formatPercent(insights.pledgeChangeBehavior.percentSignificantChange)}</div>
+                <div className="text-xs text-orange-800 mt-1">Changed by more than $500</div>
               </div>
 
               <div className="p-4 rounded-lg border">
-                <div className="text-sm font-medium text-muted-foreground mb-1">Variance</div>
-                <div className="text-xl font-bold">{formatNumber(insights.pledgeVolatility.variance, 0)}</div>
-                <div className="text-xs text-muted-foreground mt-1">Std dev squared</div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Range of Changes</div>
+                <div className="text-xl font-bold">
+                  {formatCurrency(insights.pledgeChangeBehavior.rangeMin)} to {formatCurrency(insights.pledgeChangeBehavior.rangeMax)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">Largest decrease to largest increase</div>
               </div>
 
               <div className="p-4 rounded-lg border">
-                <div className="text-sm font-medium text-muted-foreground mb-1">Coefficient of Variation</div>
-                <div className="text-xl font-bold">{formatNumber(insights.pledgeVolatility.coefficientOfVariation, 2)}</div>
-                <div className="text-xs text-muted-foreground mt-1">Std dev ÷ mean (higher = more variable)</div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Middle 50% Changed By</div>
+                <div className="text-xl font-bold">
+                  {formatCurrency(insights.pledgeChangeBehavior.q1)} to {formatCurrency(insights.pledgeChangeBehavior.q3)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">Between 25th and 75th percentile</div>
               </div>
             </div>
           </CardContent>

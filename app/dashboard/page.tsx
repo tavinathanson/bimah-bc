@@ -304,8 +304,12 @@ export default function DashboardPage() {
               <span className="hidden md:inline">Back to Upload</span>
             </Button>
             <Button variant="outline" onClick={() => router.push("/insights")} className="whitespace-nowrap">
-              <span className="hidden md:inline">Advanced Insights</span>
+              <span className="hidden md:inline">Insights</span>
               <span className="md:hidden">Insights</span>
+            </Button>
+            <Button variant="outline" onClick={() => router.push("/forecasts")} className="whitespace-nowrap">
+              <span className="hidden md:inline">Forecasts</span>
+              <span className="md:hidden">Forecasts</span>
             </Button>
             <Button variant="outline" onClick={handleExportCSV} className="whitespace-nowrap">
               <Download className="h-4 w-4 md:mr-2" />
@@ -487,36 +491,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="font-semibold mb-2">Age Cohorts</h4>
-                  <div className="space-y-1 text-muted-foreground">
-                    <div><strong className="text-foreground">Under 40:</strong> Age ≤ 39</div>
-                    <div><strong className="text-foreground">40-49:</strong> Ages 40-49</div>
-                    <div><strong className="text-foreground">50-64:</strong> Ages 50-64</div>
-                    <div><strong className="text-foreground">65+:</strong> Age ≥ 65</div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold mb-2">Pledge Bins</h4>
-                  <div className="space-y-1 text-muted-foreground">
-                    <div><strong className="text-foreground">$1-$1,799:</strong> Pledges from $1 to $1,799</div>
-                    <div><strong className="text-foreground">$1,800-$2,499:</strong> Pledges from $1,800 to $2,499</div>
-                    <div><strong className="text-foreground">$2,500-$3,599:</strong> Pledges from $2,500 to $3,599</div>
-                    <div><strong className="text-foreground">$3,600-$5,399:</strong> Pledges from $3,600 to $5,399</div>
-                    <div><strong className="text-foreground">$5,400+:</strong> Pledges $5,400 and above</div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold mb-2">Change Direction (Renewed Only)</h4>
-                  <div className="space-y-1 text-muted-foreground">
-                    <div><strong className="text-foreground">Increased:</strong> Current pledge &gt; prior pledge</div>
-                    <div><strong className="text-foreground">Decreased:</strong> Current pledge &lt; prior pledge</div>
-                    <div><strong className="text-foreground">No Change:</strong> Current pledge = prior pledge</div>
-                  </div>
-                </div>
-
                 <div className="pt-2 border-t text-xs text-muted-foreground">
                   <strong>Fiscal Year:</strong> FY26 (July 1, 2025 - June 30, 2026)
                 </div>
@@ -602,8 +576,8 @@ export default function DashboardPage() {
         </Card>
 
         <div className="bg-white/60 backdrop-blur-sm border border-[#bae0ff] rounded-lg p-3 md:p-4">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-[#1886d9] mt-0.5 flex-shrink-0" />
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-[#1886d9] flex-shrink-0" />
             <div className="text-xs md:text-sm text-[#0e2546]">
               <strong>Note:</strong> Time-based pledge progress requires gift dates; this version computes a snapshot from the uploaded files.
             </div>
@@ -661,15 +635,15 @@ export default function DashboardPage() {
                 <CardTitle className="text-lg md:text-xl">Pledge Status Distribution</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
-                  <PieChart>
+                <ResponsiveContainer width="100%" height={220} className="md:!h-[250px]">
+                  <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
                     <Pie
                       data={statusChartData}
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      outerRadius={100}
+                      outerRadius={80}
                       label
                       onClick={(data) => {
                         // Map display name back to status value
@@ -689,21 +663,34 @@ export default function DashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend
-                      onClick={(data) => {
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {/* Custom Legend */}
+                <div className="flex flex-wrap justify-center gap-3 md:gap-4 mt-4">
+                  {statusChartData.map((entry, index) => (
+                    <button
+                      key={entry.name}
+                      onClick={() => {
                         const statusMap: Record<string, string> = {
                           "Renewed": "renewed",
                           "Current only": "current-only",
                           "Prior only": "prior-only",
                           "No pledge both": "no-pledge-both"
                         };
-                        const status = statusMap[data.value];
+                        const status = statusMap[entry.name];
                         if (status) setFilterStatus(status);
                       }}
-                      wrapperStyle={{ cursor: "pointer" }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+                    >
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <span className="text-sm">{entry.name}</span>
+                    </button>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
@@ -719,10 +706,11 @@ export default function DashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={(value) => [`${value} households`, "Count"]} />
                     <Bar
                       dataKey="value"
                       fill="#0e69bb"
+                      name="Households"
                       onClick={(data) => {
                         const changeMap: Record<string, string> = {
                           "Increased": "increased",
@@ -751,7 +739,7 @@ export default function DashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={(value) => [`${value}`, "Households"]} />
                     <Bar
                       dataKey="Households"
                       fill="#1886d9"
@@ -791,7 +779,7 @@ export default function DashboardPage() {
                       }}
                     />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={(value) => [`${value}`, "Households"]} />
                     <Bar
                       dataKey="Households"
                       fill="#e6aa0f"

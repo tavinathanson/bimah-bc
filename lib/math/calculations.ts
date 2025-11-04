@@ -346,10 +346,13 @@ export interface AdvancedInsights {
     upgradeRate: number;
     downgradeRate: number;
   };
-  pledgeVolatility: {
-    stdDev: number;
-    variance: number;
-    coefficientOfVariation: number;
+  pledgeChangeBehavior: {
+    rangeMin: number;
+    rangeMax: number;
+    percentStable: number; // within ±10%
+    percentSignificantChange: number; // changed by >$500
+    q1: number; // 25th percentile of changes
+    q3: number; // 75th percentile of changes
   };
   ageStats: {
     mean: number;
@@ -415,14 +418,29 @@ export function calculateAdvancedInsights(rows: PledgeRow[]): AdvancedInsights {
   const upgradeRate = renewedWithChanges.length > 0 ? upgraded / renewedWithChanges.length : 0;
   const downgradeRate = renewedWithChanges.length > 0 ? downgraded / renewedWithChanges.length : 0;
 
-  // Pledge Volatility
+  // Pledge Change Behavior (more intuitive than variance/std dev)
   const changes = renewedWithChanges.map(r => r.changeDollar);
-  const meanChange = changes.length > 0 ? changes.reduce((sum, v) => sum + v, 0) / changes.length : 0;
-  const variance = changes.length > 0
-    ? changes.reduce((sum, v) => sum + Math.pow(v - meanChange, 2), 0) / changes.length
-    : 0;
-  const stdDev = Math.sqrt(variance);
-  const coefficientOfVariation = meanChange !== 0 ? stdDev / Math.abs(meanChange) : 0;
+  const sortedChanges = [...changes].sort((a, b) => a - b);
+
+  const rangeMin = sortedChanges[0] || 0;
+  const rangeMax = sortedChanges[sortedChanges.length - 1] || 0;
+
+  // Quartiles
+  const q1Index = Math.floor(sortedChanges.length * 0.25);
+  const q3Index = Math.floor(sortedChanges.length * 0.75);
+  const q1 = sortedChanges[q1Index] || 0;
+  const q3 = sortedChanges[q3Index] || 0;
+
+  // Percent stable (within ±10% of prior pledge)
+  const stable = renewedWithChanges.filter(r => {
+    const percentChange = r.pledgePrior > 0 ? Math.abs(r.changeDollar / r.pledgePrior) : 0;
+    return percentChange <= 0.10;
+  }).length;
+  const percentStable = renewedWithChanges.length > 0 ? stable / renewedWithChanges.length : 0;
+
+  // Percent with significant change (>$500 absolute change)
+  const significantChange = renewedWithChanges.filter(r => Math.abs(r.changeDollar) > 500).length;
+  const percentSignificantChange = renewedWithChanges.length > 0 ? significantChange / renewedWithChanges.length : 0;
 
   // Age Stats
   const ages = rows.map(r => r.age).sort((a, b) => a - b);
@@ -491,10 +509,13 @@ export function calculateAdvancedInsights(rows: PledgeRow[]): AdvancedInsights {
       upgradeRate,
       downgradeRate,
     },
-    pledgeVolatility: {
-      stdDev,
-      variance,
-      coefficientOfVariation,
+    pledgeChangeBehavior: {
+      rangeMin,
+      rangeMax,
+      percentStable,
+      percentSignificantChange,
+      q1,
+      q3,
     },
     ageStats: {
       mean: meanAge,
