@@ -15,12 +15,12 @@ describe("Status Classification", () => {
     expect(classifyStatus(1000, 900)).toBe("renewed");
   });
 
-  it("should classify as new when pledged current only", () => {
-    expect(classifyStatus(1000, 0)).toBe("new");
+  it("should classify as current-only when pledged current only", () => {
+    expect(classifyStatus(1000, 0)).toBe("current-only");
   });
 
-  it("should classify as resigned when pledged prior only", () => {
-    expect(classifyStatus(0, 1000)).toBe("resigned");
+  it("should classify as prior-only when pledged prior only", () => {
+    expect(classifyStatus(0, 1000)).toBe("prior-only");
   });
 
   it("should classify as no-pledge-both when no pledge either year", () => {
@@ -114,7 +114,7 @@ describe("Enrich Rows", () => {
       age: 50,
       pledgeCurrent: 3000,
       pledgePrior: 0,
-      status: "new",
+      status: "current-only",
       changeDollar: 3000,
       changePercent: null,
     });

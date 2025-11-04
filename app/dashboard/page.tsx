@@ -615,62 +615,72 @@ export default function DashboardPage() {
                 <CardTitle className="text-lg md:text-xl">Pledge Status Distribution</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={220} className="md:!h-[250px]">
-                  <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-                    <Pie
-                      data={statusChartData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      label
-                      onClick={(data) => {
-                        // Map display name back to status value
-                        const statusMap: Record<string, string> = {
-                          "Renewed": "renewed",
-                          "Current only": "current-only",
-                          "Prior only": "prior-only",
-                          "No pledge": "no-pledge-both"
-                        };
-                        const status = statusMap[data.name];
-                        if (status) setFilterStatus(status);
-                      }}
-                      cursor="pointer"
-                    >
-                      {statusChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value} Households`]} />
-                  </PieChart>
-                </ResponsiveContainer>
+                {statusChartData.length === 0 || statusChartData.every(d => d.value === 0) ? (
+                  <div className="h-[220px] md:h-[250px] flex items-center justify-center text-center p-4">
+                    <div className="text-muted-foreground">
+                      <p className="font-medium">No households match the current filters</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <ResponsiveContainer width="100%" height={220} className="md:!h-[250px]">
+                      <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                        <Pie
+                          data={statusChartData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label
+                          onClick={(data) => {
+                            // Map display name back to status value
+                            const statusMap: Record<string, string> = {
+                              "Renewed": "renewed",
+                              "Current only": "current-only",
+                              "Prior only": "prior-only",
+                              "No pledge": "no-pledge-both"
+                            };
+                            const status = statusMap[data.name];
+                            if (status) setFilterStatus(status);
+                          }}
+                          cursor="pointer"
+                        >
+                          {statusChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => [`${value} Households`]} />
+                      </PieChart>
+                    </ResponsiveContainer>
 
-                {/* Custom Legend */}
-                <div className="flex flex-wrap justify-center gap-3 md:gap-4 mt-4">
-                  {statusChartData.map((entry, index) => (
-                    <button
-                      key={entry.name}
-                      onClick={() => {
-                        const statusMap: Record<string, string> = {
-                          "Renewed": "renewed",
-                          "Current only": "current-only",
-                          "Prior only": "prior-only",
-                          "No pledge": "no-pledge-both"
-                        };
-                        const status = statusMap[entry.name];
-                        if (status) setFilterStatus(status);
-                      }}
-                      className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      />
-                      <span className="text-sm">{entry.name}</span>
-                    </button>
-                  ))}
-                </div>
+                    {/* Custom Legend */}
+                    <div className="flex flex-wrap justify-center gap-3 md:gap-4 mt-4">
+                      {statusChartData.map((entry, index) => (
+                        <button
+                          key={entry.name}
+                          onClick={() => {
+                            const statusMap: Record<string, string> = {
+                              "Renewed": "renewed",
+                              "Current only": "current-only",
+                              "Prior only": "prior-only",
+                              "No pledge": "no-pledge-both"
+                            };
+                            const status = statusMap[entry.name];
+                            if (status) setFilterStatus(status);
+                          }}
+                          className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+                        >
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          />
+                          <span className="text-sm">{entry.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
@@ -681,29 +691,42 @@ export default function DashboardPage() {
                 <CardTitle className="text-lg md:text-xl">Change Direction (Renewed Only)</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
-                  <BarChart data={changeData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`${value} Households`, "Count"]} />
-                    <Bar
-                      dataKey="value"
-                      fill="#0e69bb"
-                      name="Households"
-                      onClick={(data) => {
-                        const changeMap: Record<string, string> = {
-                          "Increased": "increased",
-                          "Decreased": "decreased",
-                          "No Change": "no-change"
-                        };
-                        const change = changeMap[data.name];
-                        if (change) setFilterChange(change);
-                      }}
-                      cursor="pointer"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                {changeData.every(d => d.value === 0) ? (
+                  <div className="h-[250px] md:h-[300px] flex items-center justify-center text-center p-4">
+                    <div className="text-muted-foreground">
+                      <p className="font-medium mb-2">No renewed households to display</p>
+                      <p className="text-sm">
+                        {filteredData.length === 0
+                          ? "No households match the current filters"
+                          : "Only renewed households (pledged in both years) show change direction"}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
+                    <BarChart data={changeData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [`${value} Households`, "Count"]} />
+                      <Bar
+                        dataKey="value"
+                        fill="#0e69bb"
+                        name="Households"
+                        onClick={(data) => {
+                          const changeMap: Record<string, string> = {
+                            "Increased": "increased",
+                            "Decreased": "decreased",
+                            "No Change": "no-change"
+                          };
+                          const change = changeMap[data.name];
+                          if (change) setFilterChange(change);
+                        }}
+                        cursor="pointer"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           )}
@@ -714,22 +737,30 @@ export default function DashboardPage() {
                 <CardTitle className="text-lg md:text-xl">Households by Age Cohort</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
-                  <BarChart data={cohortChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`${value}`, "Households"]} />
-                    <Bar
-                      dataKey="Households"
-                      fill="#1886d9"
-                      onClick={(data) => {
-                        setFilterCohort(data.name);
-                      }}
-                      cursor="pointer"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                {cohortChartData.length === 0 || cohortChartData.every(d => d.Households === 0) ? (
+                  <div className="h-[250px] md:h-[300px] flex items-center justify-center text-center p-4">
+                    <div className="text-muted-foreground">
+                      <p className="font-medium">No households match the current filters</p>
+                    </div>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
+                    <BarChart data={cohortChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [`${value}`, "Households"]} />
+                      <Bar
+                        dataKey="Households"
+                        fill="#1886d9"
+                        onClick={(data) => {
+                          setFilterCohort(data.name);
+                        }}
+                        cursor="pointer"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           )}
@@ -740,39 +771,52 @@ export default function DashboardPage() {
                 <CardTitle className="text-lg md:text-xl">Households by Pledge Bin</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
-                  <BarChart data={binChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="name"
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                      tickFormatter={(value) => {
-                        // Abbreviate bin labels for chart
-                        if (value.includes("$1-")) return "$1-$1.8K";
-                        if (value.includes("$1,800")) return "$1.8K-$2.5K";
-                        if (value.includes("$2,500")) return "$2.5K-$3.6K";
-                        if (value.includes("$3,600")) return "$3.6K-$5.4K";
-                        if (value.includes("$5,400")) return "$5.4K+";
-                        return value;
-                      }}
-                    />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`${value}`, "Households"]} />
-                    <Bar
-                      dataKey="Households"
-                      fill="#e6aa0f"
-                      onClick={(data) => {
-                        // Switch to bins mode and set the filter
-                        setPledgeMode("bins");
-                        setFilterBin(data.name);
-                        setShowPledgeAdvanced(true);
-                      }}
-                      cursor="pointer"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                {binChartData.length === 0 ? (
+                  <div className="h-[250px] md:h-[300px] flex items-center justify-center text-center p-4">
+                    <div className="text-muted-foreground">
+                      <p className="font-medium mb-2">No pledges &gt; $0 to display</p>
+                      <p className="text-sm">
+                        {filteredData.length === 0
+                          ? "No households match the current filters"
+                          : `All ${filteredData.length} households have $0 pledges`}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
+                    <BarChart data={binChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        tickFormatter={(value) => {
+                          // Abbreviate bin labels for chart
+                          if (value.includes("$1-")) return "$1-$1.8K";
+                          if (value.includes("$1,800")) return "$1.8K-$2.5K";
+                          if (value.includes("$2,500")) return "$2.5K-$3.6K";
+                          if (value.includes("$3,600")) return "$3.6K-$5.4K";
+                          if (value.includes("$5,400")) return "$5.4K+";
+                          return value;
+                        }}
+                      />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [`${value}`, "Households"]} />
+                      <Bar
+                        dataKey="Households"
+                        fill="#e6aa0f"
+                        onClick={(data) => {
+                          // Switch to bins mode and set the filter
+                          setPledgeMode("bins");
+                          setFilterBin(data.name);
+                          setShowPledgeAdvanced(true);
+                        }}
+                        cursor="pointer"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           )}
