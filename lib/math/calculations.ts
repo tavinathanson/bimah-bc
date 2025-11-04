@@ -249,7 +249,7 @@ export function calculateCohortMetrics(rows: PledgeRow[]): CohortMetrics[] {
  * Group rows by pledge bin
  */
 export interface BinMetrics {
-  bin: PledgeBinLabel;
+  bin: PledgeBinLabel | "$0";
   householdCount: number;
   total: number;
   average: number;
@@ -278,6 +278,20 @@ export function calculateBinMetrics(rows: PledgeRow[]): BinMetrics[] {
       median: stats.median,
     };
   });
+}
+
+/**
+ * Calculate metrics for households with $0 current pledge
+ */
+export function calculateZeroPledgeMetrics(rows: PledgeRow[]): BinMetrics {
+  const zeroRows = rows.filter((r) => r.pledgeCurrent === 0);
+  return {
+    bin: "$0",
+    householdCount: zeroRows.length,
+    total: 0,
+    average: 0,
+    median: 0,
+  };
 }
 
 /**

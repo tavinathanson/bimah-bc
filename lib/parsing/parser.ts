@@ -3,6 +3,58 @@ import type { ColumnMapping, ParsedFile, ParseError, RawRow } from "../schema/ty
 import { RawRowSchema } from "../schema/types";
 
 /**
+ * Smart column mapping - guess column names based on common patterns
+ */
+export function guessColumnMapping(headers: string[]): Partial<ColumnMapping> {
+  const mapping: Partial<ColumnMapping> = {};
+
+  const normalizedHeaders = headers.map(h => h.toLowerCase().trim());
+
+  // Age patterns
+  const agePatterns = /^(age|years|yrs|member\s*age|donor\s*age)$/i;
+  const ageIndex = normalizedHeaders.findIndex(h => agePatterns.test(h));
+  if (ageIndex !== -1) {
+    mapping.age = headers[ageIndex];
+  }
+
+  // Current year pledge patterns - look for current year, "2026", "current", etc.
+  const currentYear = new Date().getFullYear();
+  const nextYear = currentYear + 1;
+  const currentPatterns = new RegExp(
+    `^(${nextYear}|${currentYear}|current|pledge\\s*current|current\\s*pledge|fy${String(nextYear).slice(2)}|fy${nextYear})$`,
+    'i'
+  );
+  const currentIndex = normalizedHeaders.findIndex(h => currentPatterns.test(h));
+  if (currentIndex !== -1) {
+    mapping.pledgeCurrent = headers[currentIndex];
+  }
+
+  // Prior year pledge patterns
+  const priorYear = currentYear - 1;
+  const priorPatterns = new RegExp(
+    `^(${currentYear}|${priorYear}|prior|previous|last|pledge\\s*prior|prior\\s*pledge|last\\s*year|fy${String(currentYear).slice(2)}|fy${currentYear}|fy${String(priorYear).slice(2)}|fy${priorYear})$`,
+    'i'
+  );
+  const priorIndex = normalizedHeaders.findIndex(h => priorPatterns.test(h));
+  if (priorIndex !== -1) {
+    mapping.pledgePrior = headers[priorIndex];
+  }
+
+  // If we found a "2026" column for current, look for "2025" for prior
+  if (mapping.pledgeCurrent && !mapping.pledgePrior) {
+    const match2026 = normalizedHeaders.findIndex(h => h === '2026');
+    if (match2026 !== -1) {
+      const match2025 = normalizedHeaders.findIndex(h => h === '2025');
+      if (match2025 !== -1) {
+        mapping.pledgePrior = headers[match2025];
+      }
+    }
+  }
+
+  return mapping;
+}
+
+/**
  * Parse a numeric value from a cell, handling currency symbols, commas, etc.
  */
 function parseNumericValue(value: unknown): number | null {

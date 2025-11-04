@@ -39,24 +39,30 @@ function generateAge(): number {
 }
 
 function generatePledge(age: number, isRenewed: boolean): number {
-  // Base pledge amount correlated with age
-  let basePledge: number;
+  // Base pledge amount centered around $1,800
+  // Using a normal distribution approach
+  const mean = 1800;
+  const stdDev = 600;
+
+  // Box-Muller transform for normal distribution
+  const u1 = Math.random();
+  const u2 = Math.random();
+  const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+
+  let basePledge = mean + z * stdDev;
+
+  // Age adjustment (subtle influence)
   if (age < 40) {
-    basePledge = randomInt(500, 2500);
-  } else if (age < 50) {
-    basePledge = randomInt(1500, 4000);
-  } else if (age < 65) {
-    basePledge = randomInt(2000, 6000);
-  } else {
-    basePledge = randomInt(2500, 8000);
+    basePledge *= 0.85; // Younger folks pledge slightly less
+  } else if (age >= 65) {
+    basePledge *= 1.15; // Older folks pledge slightly more
   }
 
-  // Add some variation
-  const variation = basePledge * (Math.random() * 0.4 - 0.2); // +/- 20%
-  const pledge = Math.max(0, Math.round(basePledge + variation));
+  // Ensure positive values
+  basePledge = Math.max(100, basePledge);
 
   // Round to nearest $50 for realism
-  return Math.round(pledge / 50) * 50;
+  return Math.round(basePledge / 50) * 50;
 }
 
 function generateRow(index: number): {

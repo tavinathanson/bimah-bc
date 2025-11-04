@@ -6,10 +6,10 @@ import { useDropzone } from "react-dropzone";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { getFileHeaders, parseFile, previewFile } from "@/lib/parsing/parser";
+import { getFileHeaders, parseFile, previewFile, guessColumnMapping } from "@/lib/parsing/parser";
 import type { ColumnMapping, ParsedFile } from "@/lib/schema/types";
 import { enrichRows } from "@/lib/math/calculations";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 
 interface FileState {
   file: File;
@@ -36,11 +36,14 @@ export default function UploadPage() {
         acceptedFiles.map(async (file) => {
           const headers = await getFileHeaders(file);
           const preview = await previewFile(file, 25);
+          const guessedMapping = guessColumnMapping(headers);
+
           return {
             file,
             status: "mapping" as const,
             headers,
             preview,
+            mapping: guessedMapping as ColumnMapping,
           };
         })
       );
@@ -206,6 +209,14 @@ export default function UploadPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    {(currentFile.mapping?.age || currentFile.mapping?.pledgeCurrent || currentFile.mapping?.pledgePrior) && (
+                      <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                        <Sparkles className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-blue-900">
+                          <strong>Smart mapping applied!</strong> We auto-detected some columns. Please verify they're correct.
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Age Column</label>
