@@ -14,8 +14,9 @@ import {
   getPledgeBin,
 } from "@/lib/math/calculations";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { AlertCircle, ArrowLeft, Download, FileSpreadsheet } from "lucide-react";
+import { AlertCircle, ArrowLeft, Download, FileSpreadsheet, Filter, X } from "lucide-react";
 import { generateExcelWorkbook } from "@/lib/export/excelExporter";
+import { Select } from "@/components/ui/select";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981"];
 
@@ -23,6 +24,14 @@ export default function DashboardPage() {
   const [data, setData] = useState<PledgeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // Filters
+  const [filterCohort, setFilterCohort] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterBin, setFilterBin] = useState<string>("all");
+  const [filterChange, setFilterChange] = useState<string>("all");
+  const [minPledge, setMinPledge] = useState<number>(0);
+  const [maxPledge, setMaxPledge] = useState<number>(Infinity);
 
   useEffect(() => {
     const stored = sessionStorage.getItem("pledgeData");
@@ -70,14 +79,59 @@ export default function DashboardPage() {
     );
   }
 
-  const totals = calculateTotals(data);
-  const cohortMetrics = calculateCohortMetrics(data);
-  const binMetrics = calculateBinMetrics(data);
-  const statusMetrics = calculateStatusMetrics(data);
+  // Apply filters
+  const filteredData = data.filter((row) => {
+    // Cohort filter
+    if (filterCohort !== "all" && getAgeCohort(row.age) !== filterCohort) {
+      return false;
+    }
+
+    // Status filter
+    if (filterStatus !== "all" && row.status !== filterStatus) {
+      return false;
+    }
+
+    // Bin filter
+    if (filterBin !== "all") {
+      const bin = getPledgeBin(row.pledgeCurrent);
+      if (bin !== filterBin) return false;
+    }
+
+    // Change direction filter (only applies to renewed)
+    if (filterChange !== "all" && row.status === "renewed") {
+      if (filterChange === "increased" && row.changeDollar <= 0) return false;
+      if (filterChange === "decreased" && row.changeDollar >= 0) return false;
+      if (filterChange === "no-change" && row.changeDollar !== 0) return false;
+    }
+
+    // Pledge amount range
+    if (row.pledgeCurrent < minPledge || row.pledgeCurrent > maxPledge) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const hasActiveFilters = filterCohort !== "all" || filterStatus !== "all" ||
+    filterBin !== "all" || filterChange !== "all" || minPledge > 0 || maxPledge < Infinity;
+
+  const clearFilters = () => {
+    setFilterCohort("all");
+    setFilterStatus("all");
+    setFilterBin("all");
+    setFilterChange("all");
+    setMinPledge(0);
+    setMaxPledge(Infinity);
+  };
+
+  const totals = calculateTotals(filteredData);
+  const cohortMetrics = calculateCohortMetrics(filteredData);
+  const binMetrics = calculateBinMetrics(filteredData);
+  const statusMetrics = calculateStatusMetrics(filteredData);
 
   const handleExportCSV = () => {
     const headers = ["Age", "Prior Pledge", "Current Pledge", "Change $", "Change %", "Status"];
-    const rows = data.map((row) => [
+    const rows = filteredData.map((row) => [
       row.age,
       row.pledgePrior.toFixed(2),
       row.pledgeCurrent.toFixed(2),
@@ -97,11 +151,12 @@ export default function DashboardPage() {
   };
 
   const handleExportExcel = async () => {
-    const blob = await generateExcelWorkbook(data);
+    const blob = await generateExcelWorkbook(filteredData);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `pledge-report-${new Date().toISOString().split("T")[0]}.xlsx`;
+    const suffix = hasActiveFilters ? "-filtered" : "";
+    a.download = `pledge-report${suffix}-${new Date().toISOString().split("T")[0]}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -166,6 +221,83 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filters:</span>
+              </div>
+
+              <Select
+                value={filterCohort}
+                onChange={(e) => setFilterCohort(e.target.value)}
+                className="w-36"
+              >
+                <option value="all">All Cohorts</option>
+                <option value="Under 40">Under 40</option>
+                <option value="40-49">40-49</option>
+                <option value="50-64">50-64</option>
+                <option value="65+">65+</option>
+              </Select>
+
+              <Select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-36"
+              >
+                <option value="all">All Status</option>
+                <option value="renewed">Renewed</option>
+                <option value="new">New</option>
+                <option value="resigned">Resigned</option>
+                <option value="no-pledge-both">No Pledge</option>
+              </Select>
+
+              <Select
+                value={filterBin}
+                onChange={(e) => setFilterBin(e.target.value)}
+                className="w-40"
+              >
+                <option value="all">All Pledge Bins</option>
+                <option value="$1-$1,799">$1-$1,799</option>
+                <option value="$1,800-$2,499">$1,800-$2,499</option>
+                <option value="$2,500-$3,599">$2,500-$3,599</option>
+                <option value="$3,600-$5,399">$3,600-$5,399</option>
+                <option value="$5,400+">$5,400+</option>
+              </Select>
+
+              <Select
+                value={filterChange}
+                onChange={(e) => setFilterChange(e.target.value)}
+                className="w-36"
+              >
+                <option value="all">All Changes</option>
+                <option value="increased">Increased</option>
+                <option value="decreased">Decreased</option>
+                <option value="no-change">No Change</option>
+              </Select>
+
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="gap-1"
+                >
+                  <X className="h-3 w-3" />
+                  Clear Filters
+                </Button>
+              )}
+
+              {hasActiveFilters && (
+                <span className="text-sm text-muted-foreground ml-auto">
+                  Showing {filteredData.length} of {data.length} households
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-2">
