@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// TEMPORARILY DISABLED: Passcode authentication not needed since all data is local
+// To re-enable: uncomment the middleware function and config below
 export function middleware(request: NextRequest) {
+  // Passcode protection is currently disabled - all data is processed client-side
+  return NextResponse.next();
+
+  /* DISABLED CODE - uncomment to re-enable passcode protection
   const { pathname } = request.nextUrl;
 
   // Allow access to /enter page and /enter/api endpoint
@@ -18,6 +24,7 @@ export function middleware(request: NextRequest) {
   }
 
   return NextResponse.next();
+  */
 }
 
 export const config = {
