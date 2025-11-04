@@ -15,12 +15,12 @@ import {
   getPledgeBin,
 } from "@/lib/math/calculations";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { AlertCircle, ArrowLeft, Download, FileSpreadsheet, Filter, X, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { AlertCircle, Filter, X, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { generateExcelWorkbook } from "@/lib/export/excelExporter";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import numeral from "numeral";
-import { BimahLogoWithText } from "@/components/ui/BimahLogoWithText";
+import { AppNav } from "@/components/ui/AppNav";
 
 // Theme colors - Blue dominant with gold accents (Jewish theme)
 const COLORS = [
@@ -267,45 +267,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-3 md:gap-4">
-            <button
-              onClick={() => router.push("/")}
-              className="hover:opacity-80 transition-opacity"
-              title="Go to home"
-            >
-              <BimahLogoWithText
-                logoSize={24}
-                textClassName="font-mono text-xl md:text-2xl tracking-tight text-[#0e2546]"
-              />
-            </button>
-            <div className="border-l border-border pl-3 md:pl-4">
-              <h1 className="text-xl md:text-2xl font-bold">Pledge Analytics</h1>
-              <p className="text-muted-foreground text-xs md:text-sm mt-0.5">
-                FY26 (July 2025 - June 2026)
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            <Button variant="outline" onClick={() => router.push("/import")} className="whitespace-nowrap">
-              <ArrowLeft className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">Back to Import</span>
-            </Button>
-            <Button variant="outline" onClick={() => router.push("/insights")} className="whitespace-nowrap">
-              <span className="hidden md:inline">Insights</span>
-              <span className="md:hidden">Insights</span>
-            </Button>
-            <Button variant="outline" onClick={() => router.push("/forecasts")} className="whitespace-nowrap">
-              <span className="hidden md:inline">Forecasts</span>
-              <span className="md:hidden">Forecasts</span>
-            </Button>
-            <Button onClick={handleExportExcel} className="whitespace-nowrap">
-              <Download className="h-4 w-4 md:mr-2" />
-              <span className="hidden sm:inline">Export Summary</span>
-              <span className="sm:hidden">Export</span>
-            </Button>
-          </div>
-        </div>
+        <AppNav onExport={handleExportExcel} showExport={true} />
 
         <Card>
           <CardContent className="p-3 md:p-4 space-y-3">

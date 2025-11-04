@@ -47,9 +47,9 @@ export async function generateExcelWorkbook(data: PledgeRow[]): Promise<Blob> {
   readMeSheet.addRow([]);
   readMeSheet.addRow(["Status Classifications:"]);
   readMeSheet.addRow(["  • Renewed: pledged > 0 in both years"]);
-  readMeSheet.addRow(["  • New: pledged > 0 in current FY, 0 in prior FY"]);
-  readMeSheet.addRow(["  • Resigned: pledged 0 in current FY, > 0 in prior FY"]);
-  readMeSheet.addRow(["  • No-pledge-both: 0 in both years"]);
+  readMeSheet.addRow(["  • Current Year Only: pledged > 0 in current FY, 0 in prior FY"]);
+  readMeSheet.addRow(["  • Prior Year Only: pledged 0 in current FY, > 0 in prior FY"]);
+  readMeSheet.addRow(["  • No Pledge: 0 in both years"]);
   readMeSheet.addRow([]);
   readMeSheet.addRow(["Validation Rules:"]);
   readMeSheet.addRow(["  • Age must be a non-negative integer"]);
@@ -206,9 +206,17 @@ export async function generateExcelWorkbook(data: PledgeRow[]): Promise<Blob> {
     fgColor: { argb: "FFE0E7FF" },
   };
 
+  // Map status values to display names matching the dashboard
+  const statusDisplayNames: Record<string, string> = {
+    "renewed": "Renewed",
+    "current-only": "Current Year Only",
+    "prior-only": "Prior Year Only",
+    "no-pledge-both": "No Pledge"
+  };
+
   statusMetrics.forEach((status) => {
     const row = statusSheet.addRow({
-      status: status.status.charAt(0).toUpperCase() + status.status.slice(1).replace(/-/g, " "),
+      status: statusDisplayNames[status.status] || status.status,
       households: status.householdCount,
       totalCurrent: status.totalCurrent,
       totalPrior: status.totalPrior,

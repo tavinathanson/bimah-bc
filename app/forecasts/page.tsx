@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import type { PledgeRow } from "@/lib/schema/types";
-import { ArrowLeft, TrendingUp, AlertTriangle, Users, DollarSign, Target, Calendar, LineChart } from "lucide-react";
+import { TrendingUp, AlertTriangle, Users, DollarSign, Target, Calendar, LineChart } from "lucide-react";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, LineChart as RechartsLineChart, Line, ComposedChart } from "recharts";
-import { BimahLogoWithText } from "@/components/ui/BimahLogoWithText";
+import { AppNav } from "@/components/ui/AppNav";
 
 interface ForecastMetrics {
   nextYearProjection: {
@@ -244,31 +243,7 @@ export default function ForecastsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-3 md:gap-4">
-            <button
-              onClick={() => router.push("/")}
-              className="hover:opacity-80 transition-opacity"
-              title="Go to home"
-            >
-              <BimahLogoWithText
-                logoSize={24}
-                textClassName="font-mono text-xl md:text-2xl tracking-tight text-[#0e2546]"
-              />
-            </button>
-            <div className="border-l border-border pl-3 md:pl-4">
-              <h1 className="text-xl md:text-2xl font-bold">Forecasts & Projections</h1>
-              <p className="text-muted-foreground text-xs md:text-sm mt-0.5">
-                Statistical projections based on current trends
-              </p>
-            </div>
-          </div>
-          <Button variant="outline" onClick={() => router.push("/dashboard")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-        </div>
+        <AppNav />
 
         {/* Warning Banner */}
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
