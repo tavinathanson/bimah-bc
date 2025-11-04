@@ -10,7 +10,9 @@ const FIRST_NAMES = [
   "Hannah", "Isaac", "Isabel", "Jacob", "Jason", "Jennifer", "Jessica", "Jonathan",
   "Jordan", "Joseph", "Joshua", "Julia", "Leah", "Levi", "Maya", "Michael",
   "Miriam", "Nathan", "Noah", "Olivia", "Rachel", "Rebecca", "Ruth", "Samuel",
-  "Sarah", "Sophia", "Tamar", "Zachary",
+  "Sarah", "Sophia", "Tamar", "Zachary", "Yael", "Ariel", "Shira", "Avi", "Moshe",
+  "Liam", "William", "Isabella", "Lucas", "Mia", "Henry", "Charlotte", "Amelia",
+  "Alexander", "Harper", "Grace", "Jack", "Emily", "James", "Ava",
 ];
 
 const LAST_NAMES = [
@@ -19,6 +21,10 @@ const LAST_NAMES = [
   "Stein", "Rosen", "Wolf", "Fox", "Berg", "Bloom", "Rubin", "Weiss",
   "Kaplan", "Solomon", "Goldman", "Bernstein", "Adler", "Frank", "Harris",
   "Fisher", "Price", "Stone", "Becker", "Gordon", "Simon", "Davis", "Brown",
+  "Mizrahi", "Azoulay", "Dahan", "Peretz", "Abboud", "Elias", "Smith", "Johnson",
+  "Williams", "Jones", "Garcia", "Martinez", "Rodriguez", "Wilson", "Anderson",
+  "Taylor", "Thomas", "Moore", "Jackson", "Martin", "Lee", "Thompson", "White",
+  "Sanchez", "Clark", "Lewis", "Robinson", "Walker", "Young", "Allen", "King",
 ];
 
 function randomChoice<T>(arr: T[]): T {

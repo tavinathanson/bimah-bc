@@ -8,11 +8,18 @@ const FIRST_NAMES = [
   "Aaron", "Abigail", "Adam", "Alex", "Benjamin", "Beth", "Daniel", "David",
   "Eli", "Hannah", "Isaac", "Jacob", "Jonathan", "Leah", "Michael", "Miriam",
   "Nathan", "Noah", "Rachel", "Rebecca", "Ruth", "Samuel", "Sarah", "Sophia",
+  "Yael", "Ariel", "Shira", "Avi", "Tamar", "Moshe", "Emma", "Liam", "Olivia",
+  "James", "Ava", "William", "Isabella", "Lucas", "Mia", "Henry", "Charlotte",
+  "Ethan", "Amelia", "Alexander", "Harper", "Grace", "Jack", "Emily"
 ];
 
 const LAST_NAMES = [
   "Cohen", "Levy", "Miller", "Schwartz", "Goldberg", "Friedman", "Shapiro",
   "Klein", "Rosenberg", "Green", "Silver", "Diamond", "Stein", "Wolf",
+  "Mizrahi", "Azoulay", "Dahan", "Peretz", "Abboud", "Elias", "Smith", "Johnson",
+  "Williams", "Brown", "Jones", "Garcia", "Martinez", "Davis", "Rodriguez", "Wilson",
+  "Anderson", "Taylor", "Thomas", "Moore", "Jackson", "Martin", "Lee", "Thompson",
+  "White", "Harris", "Sanchez", "Clark", "Lewis", "Robinson", "Walker", "Young"
 ];
 
 function randomChoice<T>(arr: T[]): T {
