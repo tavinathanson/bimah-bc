@@ -10,12 +10,12 @@
 - ✅ Is stored only in your browser's session storage
 - ✅ Disappears when you close the browser tab
 
-The only server interaction is a one-time passcode check for authentication. After that, everything runs client-side using JavaScript in your browser.
+Everything runs client-side using JavaScript in your browser. No server interaction is required.
 
 ## Features
 
-- **Secure Authentication**: Passcode-protected access via httpOnly cookies
-- **Multi-File Upload**: Drag-and-drop XLSX/CSV file uploads with support for multiple files
+- **No Login Required**: Since all data is processed locally in your browser, no authentication needed (passcode feature available but currently disabled)
+- **Multi-File Import**: Drag-and-drop XLSX/CSV file imports with support for multiple files
 - **Smart Column Mapping**: Flexible column mapping interface with live preview
 - **Data Validation**: Row-level validation with clear error reporting
 - **Comprehensive Analytics**:
@@ -65,19 +65,15 @@ cd bimah-bc
 npm install
 ```
 
-3. Create a `.env.local` file with your passcode:
-
-```bash
-BIMAH_PASSCODE=your-secure-passcode-here
-```
-
-4. Run the development server:
+3. Run the development server:
 
 ```bash
 npm run dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+**Note**: Passcode authentication is currently disabled since all data is local. To re-enable it, uncomment the middleware code in `middleware.ts` and set `BIMAH_PASSCODE` in `.env.local`.
 
 ### Building for Production
 
@@ -103,17 +99,13 @@ Ensure your code is pushed to a GitHub repository.
    - **Build Command**: `npm run build` (default)
    - **Output Directory**: `.next` (default)
 
-### 3. Set Environment Variable
-
-In Vercel project settings, add:
-- **Key**: `BIMAH_PASSCODE`
-- **Value**: Your secure passcode
-
-### 4. Deploy
+### 3. Deploy (No Environment Variables Needed)
 
 Click "Deploy" and wait for the build to complete.
 
-### 5. Configure Custom Domain (bethchaim.bimah.org)
+**Note**: Since passcode authentication is disabled, no environment variables are required. The app will work immediately after deployment.
+
+### 4. Configure Custom Domain (bethchaim.bimah.org)
 
 #### In Vercel:
 1. Go to your project settings → Domains
@@ -136,9 +128,9 @@ Vercel will automatically provision an SSL certificate for your custom domain.
 
 ## Usage Guide
 
-### 1. Authentication
+### 1. Access the App
 
-When you first access the app, you'll be prompted to enter the passcode configured in your environment variables. This creates a secure session cookie that lasts 24 hours.
+Simply visit https://bethchaim.bimah.org (or your Vercel URL). No login required!
 
 ### 2. Preparing Your Data
 
@@ -250,7 +242,7 @@ Bins use **[inclusive lower, exclusive upper)** boundaries except the last bin:
    - Cannot be accessed by other websites
    - Is never synced or backed up anywhere
 
-4. **Authentication**: The only server interaction is checking your passcode when you first log in. This creates a session cookie that proves you're authenticated, but doesn't contain any pledge data.
+4. **No Authentication Required**: Since all data is local, no login or passcode is needed. You can start using the app immediately.
 
 5. **No Analytics or Tracking**: This application does not use Google Analytics, Facebook Pixel, or any other tracking services.
 
@@ -268,7 +260,7 @@ The server **never** receives:
 - Names or identifying information
 - Any analytics or usage data
 
-## Testing
+## Testing & Linting
 
 Run the test suite:
 
@@ -287,6 +279,26 @@ Generate coverage report:
 ```bash
 npm run test:coverage
 ```
+
+Check for TypeScript errors:
+
+```bash
+npm run type-check
+```
+
+Run linter:
+
+```bash
+npm run lint
+```
+
+Run both type checking and linting:
+
+```bash
+npm run check
+```
+
+**Before pushing to GitHub**, run `npm run check` to catch TypeScript and linting errors locally.
 
 ## Project Structure
 

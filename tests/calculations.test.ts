@@ -138,7 +138,7 @@ describe("Calculate Totals", () => {
         pledgeCurrent: 3000,
         pledgePrior: 0,
         householdKey: "hh_2",
-        status: "new",
+        status: "current-only",
         changeDollar: 3000,
         changePercent: null,
       },
@@ -147,7 +147,7 @@ describe("Calculate Totals", () => {
         pledgeCurrent: 0,
         pledgePrior: 1000,
         householdKey: "hh_3",
-        status: "resigned",
+        status: "prior-only",
         changeDollar: -1000,
         changePercent: -1,
       },
@@ -161,8 +161,8 @@ describe("Calculate Totals", () => {
     expect(totals.deltaDollar).toBe(2500);
     expect(totals.deltaPercent).toBe(1);
     expect(totals.renewed).toBe(1);
-    expect(totals.new).toBe(1);
-    expect(totals.resigned).toBe(1);
+    expect(totals.currentOnly).toBe(1);
+    expect(totals.priorOnly).toBe(1);
     expect(totals.noPledgeBoth).toBe(0);
   });
 });

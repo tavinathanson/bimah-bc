@@ -564,7 +564,7 @@ export default function ForecastsPage() {
                     tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
                   />
                   <Tooltip
-                    formatter={(value: number | null) => value !== null ? `$${value.toLocaleString()}` : "N/A"}
+                    formatter={(value) => value !== null ? `$${Number(value).toLocaleString()}` : "N/A"}
                   />
                   {/* Historical line (solid) */}
                   <Line
