@@ -311,7 +311,7 @@ export default function DashboardPage() {
           <CardContent className="p-3 md:p-4 space-y-3">
             {/* Main Filter Bar */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center justify-between gap-2 mb-3 min-h-[28px]">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">Filters:</span>
@@ -332,7 +332,7 @@ export default function DashboardPage() {
                       variant="outline"
                       size="sm"
                       onClick={clearFilters}
-                      className="gap-1 h-7"
+                      className="gap-1 h-7 py-0"
                     >
                       <X className="h-3 w-3" />
                       Clear All Filters
@@ -589,8 +589,8 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card className={hasActiveFilters ? "ring-2 ring-blue-400" : ""}>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
+            <CardHeader className="py-4 md:py-6">
+              <div className="flex items-center gap-2 mb-2">
                 <CardDescription className="text-xs md:text-sm">Total Households</CardDescription>
                 {hasActiveFilters && <span className="text-blue-600 text-sm">●</span>}
               </div>
@@ -603,7 +603,7 @@ export default function DashboardPage() {
                 )}
               </CardTitle>
               {hasActiveFilters && (
-                <CardDescription className="text-xs text-blue-700 font-medium mt-1">
+                <CardDescription className="text-xs text-blue-700 font-medium mt-2">
                   Filtered view
                 </CardDescription>
               )}
@@ -611,35 +611,35 @@ export default function DashboardPage() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="text-xs md:text-sm">Current Pledges</CardDescription>
+            <CardHeader className="py-4 md:py-6">
+              <CardDescription className="text-xs md:text-sm mb-2">Current Pledges</CardDescription>
               <CardTitle className="text-2xl md:text-3xl">{formatCurrency(totals.totalPledgedCurrent)}</CardTitle>
             </CardHeader>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="text-xs md:text-sm">Change from Prior Year</CardDescription>
+            <CardHeader className="py-4 md:py-6">
+              <CardDescription className="text-xs md:text-sm mb-2">Change from Prior Year</CardDescription>
               <CardTitle className={`text-2xl md:text-3xl flex items-center gap-2 ${totals.deltaDollar >= 0 ? "text-green-600" : "text-red-600"}`}>
                 <span>{totals.deltaDollar >= 0 ? "↑" : "↓"}</span>
                 <span>{formatCurrency(Math.abs(totals.deltaDollar))}</span>
               </CardTitle>
-              <CardDescription className="text-xs md:text-sm space-y-0.5">
-                <div className={totals.deltaDollar >= 0 ? "text-green-600" : "text-red-600"}>
+              <CardDescription className="text-xs md:text-sm mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className={totals.deltaDollar >= 0 ? "text-green-600" : "text-red-600"}>
                   {formatPercent(totals.deltaPercent)} {totals.deltaDollar >= 0 ? "increase" : "decrease"}
-                </div>
-                <div className="text-muted-foreground">
+                </span>
+                <span className="text-muted-foreground">
                   Prior: {formatCurrency(totals.totalPledgedPrior)}
-                </div>
+                </span>
               </CardDescription>
             </CardHeader>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="text-xs md:text-sm">Renewed Households</CardDescription>
+            <CardHeader className="py-4 md:py-6">
+              <CardDescription className="text-xs md:text-sm mb-2">Renewed Households</CardDescription>
               <CardTitle className="text-2xl md:text-3xl">{totals.renewed}</CardTitle>
-              <CardDescription className="text-xs md:text-sm">
+              <CardDescription className="text-xs md:text-sm mt-2">
                 {totals.currentOnly} current only, {totals.priorOnly} prior only
               </CardDescription>
             </CardHeader>
@@ -820,28 +820,28 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="text-lg md:text-xl">Age Cohort Metrics</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+          <CardContent className="pb-4 md:pb-6">
+            <div className="overflow-x-auto -mx-2 md:mx-0">
+              <table className="w-full text-xs md:text-sm min-w-[600px]">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-2">Cohort</th>
-                    <th className="text-right p-2">Households</th>
-                    <th className="text-right p-2">Total Current</th>
-                    <th className="text-right p-2">Avg Current</th>
-                    <th className="text-right p-2">Median Current</th>
-                    <th className="text-right p-2">Renewal Rate</th>
+                    <th className="text-left p-2 md:p-2 pl-2">Cohort</th>
+                    <th className="text-right p-2 md:p-2">Households</th>
+                    <th className="text-right p-2 md:p-2">Total Current</th>
+                    <th className="text-right p-2 md:p-2">Avg Current</th>
+                    <th className="text-right p-2 md:p-2">Median Current</th>
+                    <th className="text-right p-2 md:p-2 pr-2">Renewal Rate</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cohortMetrics.filter(c => c.householdCount > 0).map((cohort) => (
                     <tr key={cohort.cohort} className="border-b">
-                      <td className="p-2 font-medium">{cohort.cohort}</td>
-                      <td className="text-right p-2">{cohort.householdCount}</td>
-                      <td className="text-right p-2">{formatCurrency(cohort.totalCurrent)}</td>
-                      <td className="text-right p-2">{formatCurrency(cohort.averageCurrent)}</td>
-                      <td className="text-right p-2">{formatCurrency(cohort.medianCurrent)}</td>
-                      <td className="text-right p-2">{formatPercent(cohort.renewalRate)}</td>
+                      <td className="p-2 md:p-2 pl-2 font-medium">{cohort.cohort}</td>
+                      <td className="text-right p-2 md:p-2">{cohort.householdCount}</td>
+                      <td className="text-right p-2 md:p-2">{formatCurrency(cohort.totalCurrent)}</td>
+                      <td className="text-right p-2 md:p-2">{formatCurrency(cohort.averageCurrent)}</td>
+                      <td className="text-right p-2 md:p-2">{formatCurrency(cohort.medianCurrent)}</td>
+                      <td className="text-right p-2 md:p-2 pr-2">{formatPercent(cohort.renewalRate)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -856,18 +856,18 @@ export default function DashboardPage() {
               {pledgeMode === "custom" ? "Custom Range Metrics" : "Pledge Bin Metrics"}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+          <CardContent className="pb-4 md:pb-6">
+            <div className="overflow-x-auto -mx-2 md:mx-0">
+              <table className="w-full text-xs md:text-sm min-w-[550px]">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-2">
+                    <th className="text-left p-2 md:p-2 pl-2">
                       {pledgeMode === "custom" ? "Range" : "Bin"}
                     </th>
-                    <th className="text-right p-2">Households</th>
-                    <th className="text-right p-2">Total</th>
-                    <th className="text-right p-2">Average</th>
-                    <th className="text-right p-2">Median</th>
+                    <th className="text-right p-2 md:p-2">Households</th>
+                    <th className="text-right p-2 md:p-2">Total</th>
+                    <th className="text-right p-2 md:p-2">Average</th>
+                    <th className="text-right p-2 md:p-2 pr-2">Median</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -876,18 +876,18 @@ export default function DashboardPage() {
                       {/* Show $0 separately if min > 0 */}
                       {customZeroMetrics && customZeroMetrics.householdCount > 0 && (
                         <tr className="border-b bg-muted/30">
-                          <td className="p-2 font-medium text-muted-foreground">
+                          <td className="p-2 md:p-2 pl-2 font-medium text-muted-foreground">
                             $0 (No Current Pledge)
                           </td>
-                          <td className="text-right p-2">{customZeroMetrics.householdCount}</td>
-                          <td className="text-right p-2">{formatCurrency(customZeroMetrics.total)}</td>
-                          <td className="text-right p-2 text-muted-foreground">—</td>
-                          <td className="text-right p-2 text-muted-foreground">—</td>
+                          <td className="text-right p-2 md:p-2">{customZeroMetrics.householdCount}</td>
+                          <td className="text-right p-2 md:p-2">{formatCurrency(customZeroMetrics.total)}</td>
+                          <td className="text-right p-2 md:p-2 text-muted-foreground">—</td>
+                          <td className="text-right p-2 md:p-2 pr-2 text-muted-foreground">—</td>
                         </tr>
                       )}
                       {/* Custom range row */}
                       <tr className="border-b">
-                        <td className="p-2 font-medium">
+                        <td className="p-2 md:p-2 pl-2 font-medium">
                           {minPledge && maxPledge
                             ? `${formatCurrency(minPledgeNum)} - ${formatCurrency(maxPledgeNum)}`
                             : minPledge && minPledgeNum > 0
@@ -898,10 +898,10 @@ export default function DashboardPage() {
                             ? "All Pledges (including $0)"
                             : "All Pledges"}
                         </td>
-                        <td className="text-right p-2">{customBinMetrics.householdCount}</td>
-                        <td className="text-right p-2">{formatCurrency(customBinMetrics.total)}</td>
-                        <td className="text-right p-2">{formatCurrency(customBinMetrics.average)}</td>
-                        <td className="text-right p-2">{formatCurrency(customBinMetrics.median)}</td>
+                        <td className="text-right p-2 md:p-2">{customBinMetrics.householdCount}</td>
+                        <td className="text-right p-2 md:p-2">{formatCurrency(customBinMetrics.total)}</td>
+                        <td className="text-right p-2 md:p-2">{formatCurrency(customBinMetrics.average)}</td>
+                        <td className="text-right p-2 md:p-2 pr-2">{formatCurrency(customBinMetrics.median)}</td>
                       </tr>
                     </>
                   ) : (
@@ -909,23 +909,23 @@ export default function DashboardPage() {
                       {/* Show $0 row first */}
                       {zeroPledgeMetrics.householdCount > 0 && (
                         <tr className="border-b bg-muted/30">
-                          <td className="p-2 font-medium text-muted-foreground">
+                          <td className="p-2 md:p-2 pl-2 font-medium text-muted-foreground">
                             $0 (No Current Pledge)
                           </td>
-                          <td className="text-right p-2">{zeroPledgeMetrics.householdCount}</td>
-                          <td className="text-right p-2">{formatCurrency(zeroPledgeMetrics.total)}</td>
-                          <td className="text-right p-2 text-muted-foreground">—</td>
-                          <td className="text-right p-2 text-muted-foreground">—</td>
+                          <td className="text-right p-2 md:p-2">{zeroPledgeMetrics.householdCount}</td>
+                          <td className="text-right p-2 md:p-2">{formatCurrency(zeroPledgeMetrics.total)}</td>
+                          <td className="text-right p-2 md:p-2 text-muted-foreground">—</td>
+                          <td className="text-right p-2 md:p-2 pr-2 text-muted-foreground">—</td>
                         </tr>
                       )}
                       {/* Standard bins */}
                       {binMetrics.filter(b => b.householdCount > 0).map((bin) => (
                         <tr key={bin.bin} className="border-b">
-                          <td className="p-2 font-medium">{bin.bin}</td>
-                          <td className="text-right p-2">{bin.householdCount}</td>
-                          <td className="text-right p-2">{formatCurrency(bin.total)}</td>
-                          <td className="text-right p-2">{formatCurrency(bin.average)}</td>
-                          <td className="text-right p-2">{formatCurrency(bin.median)}</td>
+                          <td className="p-2 md:p-2 pl-2 font-medium">{bin.bin}</td>
+                          <td className="text-right p-2 md:p-2">{bin.householdCount}</td>
+                          <td className="text-right p-2 md:p-2">{formatCurrency(bin.total)}</td>
+                          <td className="text-right p-2 md:p-2">{formatCurrency(bin.average)}</td>
+                          <td className="text-right p-2 md:p-2 pr-2">{formatCurrency(bin.median)}</td>
                         </tr>
                       ))}
                     </>
