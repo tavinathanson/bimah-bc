@@ -27,7 +27,7 @@ export default function EnterPage() {
 
       if (response.ok) {
         // Use window.location for full page reload to ensure cookie is set
-        window.location.href = "/upload";
+        window.location.href = "/import";
       } else {
         const data = await response.json();
         setError(data.error || "Invalid passcode");

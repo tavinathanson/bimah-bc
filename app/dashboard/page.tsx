@@ -55,7 +55,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const stored = sessionStorage.getItem("pledgeData");
     if (!stored) {
-      router.push("/upload");
+      router.push("/import");
       return;
     }
 
@@ -63,7 +63,7 @@ export default function DashboardPage() {
       const parsed = JSON.parse(stored) as PledgeRow[];
       setData(parsed);
     } catch {
-      router.push("/upload");
+      router.push("/import");
     } finally {
       setLoading(false);
     }
@@ -88,7 +88,7 @@ export default function DashboardPage() {
               <p className="text-muted-foreground mb-4">
                 Please import and validate files first.
               </p>
-              <Button onClick={() => router.push("/upload")}>
+              <Button onClick={() => router.push("/import")}>
                 Go to Import
               </Button>
             </div>
@@ -299,7 +299,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
-            <Button variant="outline" onClick={() => router.push("/upload")} className="whitespace-nowrap">
+            <Button variant="outline" onClick={() => router.push("/import")} className="whitespace-nowrap">
               <ArrowLeft className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Back to Import</span>
             </Button>

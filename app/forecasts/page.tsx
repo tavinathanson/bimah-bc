@@ -170,7 +170,7 @@ export default function ForecastsPage() {
   useEffect(() => {
     const stored = sessionStorage.getItem("pledgeData");
     if (!stored) {
-      router.push("/upload");
+      router.push("/import");
       return;
     }
 
@@ -178,7 +178,7 @@ export default function ForecastsPage() {
       const parsed = JSON.parse(stored) as PledgeRow[];
       setData(parsed);
     } catch {
-      router.push("/upload");
+      router.push("/import");
     } finally {
       setLoading(false);
     }
@@ -193,7 +193,7 @@ export default function ForecastsPage() {
   }
 
   if (data.length === 0) {
-    router.push("/upload");
+    router.push("/import");
     return null;
   }
 

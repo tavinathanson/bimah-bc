@@ -93,6 +93,38 @@ function parseAge(value: unknown): number | null {
 }
 
 /**
+ * Format Zod validation errors into user-friendly messages
+ */
+function formatZodError(error: { issues: Array<{ path: Array<string | number>; message: string }> }): string {
+  const issue = error.issues[0];
+  if (!issue) return "Validation failed";
+
+  const field = issue.path[0];
+  const message = issue.message;
+
+  // Map field names to user-friendly terms
+  const fieldMap: Record<string, string> = {
+    age: "Age",
+    pledgeCurrent: "Current year pledge",
+    pledgePrior: "Prior year pledge",
+  };
+
+  const fieldName = fieldMap[field as string] || String(field);
+
+  // Simplify common error messages
+  if (message.includes("greater than or equal to 0")) {
+    return `${fieldName} cannot be negative`;
+  }
+
+  if (message.includes("required")) {
+    return `${fieldName} is required`;
+  }
+
+  // Default to showing the field name and message
+  return `${fieldName}: ${message}`;
+}
+
+/**
  * Detect CSV delimiter by checking the first row
  */
 function detectCSVDelimiter(text: string): string {
@@ -277,7 +309,7 @@ export async function parseFile(
       if (!parsed.success) {
         errors.push({
           row: rowNum,
-          message: `Validation error: ${parsed.error.message}`,
+          message: formatZodError(parsed.error),
         });
         continue;
       }
