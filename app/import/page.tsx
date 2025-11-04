@@ -11,6 +11,7 @@ import type { ColumnMapping, ParsedFile } from "@/lib/schema/types";
 import { enrichRows } from "@/lib/math/calculations";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 import { BimahLogoWithText } from "@/components/ui/BimahLogoWithText";
+import { generateDemoData } from "@/lib/demo/generate-demo";
 
 interface FileState {
   file: File;
@@ -106,6 +107,14 @@ export default function UploadPage() {
     router.push("/dashboard");
   };
 
+  const handleDemoData = () => {
+    // Generate demo data and go straight to dashboard
+    const demoRows = generateDemoData(500);
+    const enrichedRows = enrichRows("Demo Data", demoRows);
+    sessionStorage.setItem("pledgeData", JSON.stringify(enrichedRows));
+    router.push("/dashboard");
+  };
+
   const currentFile = currentFileIndex !== null ? files[currentFileIndex] : null;
   const allValidated = files.length > 0 && files.every((f) => f.status === "validated");
 
@@ -145,7 +154,7 @@ export default function UploadPage() {
 
         {files.length === 0 ? (
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 space-y-4">
               <div
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
@@ -164,6 +173,30 @@ export default function UploadPage() {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Supports .xlsx and .csv files
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-muted-foreground/25" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <Button
+                  onClick={handleDemoData}
+                  variant="outline"
+                  size="lg"
+                  className="gap-2"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Try Demo with Sample Data
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Explore the dashboard with 500 realistic pledge records
                 </p>
               </div>
             </CardContent>
