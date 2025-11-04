@@ -31,6 +31,22 @@ const COLORS = [
   "#f2c41e", // menorah-gold-400 (lighter gold)
 ];
 
+// Custom tooltip component for consistent formatting
+function CustomChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload || !payload.length) return null;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+      <p className="font-semibold text-sm mb-1">{label || payload[0].name}</p>
+      {payload.map((entry: any, index: number) => (
+        <p key={index} className="text-sm" style={{ color: entry.color }}>
+          {entry.value} Households
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<PledgeRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -650,7 +666,7 @@ export default function DashboardPage() {
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value) => [`${value} Households`]} />
+                        <Tooltip content={<CustomChartTooltip />} />
                       </PieChart>
                     </ResponsiveContainer>
 
@@ -708,7 +724,7 @@ export default function DashboardPage() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [`${value} Households`, "Count"]} />
+                      <Tooltip content={<CustomChartTooltip />} />
                       <Bar
                         dataKey="value"
                         fill="#0e69bb"
@@ -749,7 +765,7 @@ export default function DashboardPage() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [`${value}`, "Households"]} />
+                      <Tooltip content={<CustomChartTooltip />} />
                       <Bar
                         dataKey="Households"
                         fill="#1886d9"
@@ -802,7 +818,7 @@ export default function DashboardPage() {
                         }}
                       />
                       <YAxis />
-                      <Tooltip formatter={(value) => [`${value}`, "Households"]} />
+                      <Tooltip content={<CustomChartTooltip />} />
                       <Bar
                         dataKey="Households"
                         fill="#e6aa0f"
