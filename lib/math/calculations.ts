@@ -321,3 +321,186 @@ export function calculateStatusMetrics(rows: PledgeRow[]): StatusMetrics[] {
     };
   });
 }
+
+/**
+ * Advanced Insights Metrics
+ */
+
+export interface AdvancedInsights {
+  retentionRate: number;
+  averagePledgeByAge: { cohort: string; average: number }[];
+  pledgeConcentration: {
+    top10Percent: { households: number; amount: number; percentOfTotal: number };
+    top25Percent: { households: number; amount: number; percentOfTotal: number };
+    top50Percent: { households: number; amount: number; percentOfTotal: number };
+  };
+  newVsRenewedAverage: {
+    currentOnly: number;
+    renewed: number;
+    difference: number;
+  };
+  upgradeDowngradeRates: {
+    upgraded: number;
+    downgraded: number;
+    noChange: number;
+    upgradeRate: number;
+    downgradeRate: number;
+  };
+  pledgeVolatility: {
+    stdDev: number;
+    variance: number;
+    coefficientOfVariation: number;
+  };
+  ageStats: {
+    mean: number;
+    median: number;
+    mode: number;
+  };
+  generationalGiving: {
+    generation: string;
+    ageRange: string;
+    count: number;
+    totalPledge: number;
+    averagePledge: number;
+  }[];
+}
+
+export function calculateAdvancedInsights(rows: PledgeRow[]): AdvancedInsights {
+  // Retention Rate
+  const hadPriorPledge = rows.filter(r => r.pledgePrior > 0).length;
+  const renewed = rows.filter(r => r.status === "renewed").length;
+  const retentionRate = hadPriorPledge > 0 ? renewed / hadPriorPledge : 0;
+
+  // Average Pledge by Age
+  const cohortAverages = AGE_COHORTS.map(cohortDef => {
+    const cohortRows = rows.filter(r => getAgeCohort(r.age) === cohortDef.label && r.pledgeCurrent > 0);
+    const avg = cohortRows.length > 0
+      ? cohortRows.reduce((sum, r) => sum + r.pledgeCurrent, 0) / cohortRows.length
+      : 0;
+    return { cohort: cohortDef.label, average: avg };
+  });
+
+  // Pledge Concentration
+  const sortedByPledge = [...rows]
+    .filter(r => r.pledgeCurrent > 0)
+    .sort((a, b) => b.pledgeCurrent - a.pledgeCurrent);
+
+  const totalPledge = sortedByPledge.reduce((sum, r) => sum + r.pledgeCurrent, 0);
+
+  const top10Count = Math.ceil(sortedByPledge.length * 0.1);
+  const top25Count = Math.ceil(sortedByPledge.length * 0.25);
+  const top50Count = Math.ceil(sortedByPledge.length * 0.5);
+
+  const top10Amount = sortedByPledge.slice(0, top10Count).reduce((sum, r) => sum + r.pledgeCurrent, 0);
+  const top25Amount = sortedByPledge.slice(0, top25Count).reduce((sum, r) => sum + r.pledgeCurrent, 0);
+  const top50Amount = sortedByPledge.slice(0, top50Count).reduce((sum, r) => sum + r.pledgeCurrent, 0);
+
+  // New vs Renewed Average
+  const currentOnlyRows = rows.filter(r => r.status === "current-only" && r.pledgeCurrent > 0);
+  const renewedRows = rows.filter(r => r.status === "renewed" && r.pledgeCurrent > 0);
+
+  const currentOnlyAvg = currentOnlyRows.length > 0
+    ? currentOnlyRows.reduce((sum, r) => sum + r.pledgeCurrent, 0) / currentOnlyRows.length
+    : 0;
+  const renewedAvg = renewedRows.length > 0
+    ? renewedRows.reduce((sum, r) => sum + r.pledgeCurrent, 0) / renewedRows.length
+    : 0;
+
+  // Upgrade/Downgrade Rates
+  const renewedWithChanges = rows.filter(r => r.status === "renewed");
+  const upgraded = renewedWithChanges.filter(r => r.changeDollar > 0).length;
+  const downgraded = renewedWithChanges.filter(r => r.changeDollar < 0).length;
+  const noChange = renewedWithChanges.filter(r => r.changeDollar === 0).length;
+
+  const upgradeRate = renewedWithChanges.length > 0 ? upgraded / renewedWithChanges.length : 0;
+  const downgradeRate = renewedWithChanges.length > 0 ? downgraded / renewedWithChanges.length : 0;
+
+  // Pledge Volatility
+  const changes = renewedWithChanges.map(r => r.changeDollar);
+  const meanChange = changes.length > 0 ? changes.reduce((sum, v) => sum + v, 0) / changes.length : 0;
+  const variance = changes.length > 0
+    ? changes.reduce((sum, v) => sum + Math.pow(v - meanChange, 2), 0) / changes.length
+    : 0;
+  const stdDev = Math.sqrt(variance);
+  const coefficientOfVariation = meanChange !== 0 ? stdDev / Math.abs(meanChange) : 0;
+
+  // Age Stats
+  const ages = rows.map(r => r.age).sort((a, b) => a - b);
+  const meanAge = ages.reduce((sum, age) => sum + age, 0) / ages.length;
+  const medianAge = ages.length % 2 === 0
+    ? (ages[ages.length / 2 - 1]! + ages[ages.length / 2]!) / 2
+    : ages[Math.floor(ages.length / 2)]!;
+
+  // Mode (most common age)
+  const ageFreq: Record<number, number> = {};
+  ages.forEach(age => ageFreq[age] = (ageFreq[age] || 0) + 1);
+  const modeAge = Number(Object.keys(ageFreq).reduce((a, b) => ageFreq[Number(a)]! > ageFreq[Number(b)]! ? a : b));
+
+  // Generational Giving
+  const generations = [
+    { generation: "Silent Generation", ageRange: "79+", minAge: 79, maxAge: 150 },
+    { generation: "Baby Boomers", ageRange: "60-78", minAge: 60, maxAge: 78 },
+    { generation: "Gen X", ageRange: "44-59", minAge: 44, maxAge: 59 },
+    { generation: "Millennials", ageRange: "28-43", minAge: 28, maxAge: 43 },
+    { generation: "Gen Z", ageRange: "12-27", minAge: 12, maxAge: 27 },
+  ];
+
+  const generationalGiving = generations.map(gen => {
+    const genRows = rows.filter(r => r.age >= gen.minAge && r.age <= gen.maxAge && r.pledgeCurrent > 0);
+    const total = genRows.reduce((sum, r) => sum + r.pledgeCurrent, 0);
+    const avg = genRows.length > 0 ? total / genRows.length : 0;
+
+    return {
+      generation: gen.generation,
+      ageRange: gen.ageRange,
+      count: genRows.length,
+      totalPledge: total,
+      averagePledge: avg,
+    };
+  });
+
+  return {
+    retentionRate,
+    averagePledgeByAge: cohortAverages,
+    pledgeConcentration: {
+      top10Percent: {
+        households: top10Count,
+        amount: top10Amount,
+        percentOfTotal: totalPledge > 0 ? (top10Amount / totalPledge) * 100 : 0,
+      },
+      top25Percent: {
+        households: top25Count,
+        amount: top25Amount,
+        percentOfTotal: totalPledge > 0 ? (top25Amount / totalPledge) * 100 : 0,
+      },
+      top50Percent: {
+        households: top50Count,
+        amount: top50Amount,
+        percentOfTotal: totalPledge > 0 ? (top50Amount / totalPledge) * 100 : 0,
+      },
+    },
+    newVsRenewedAverage: {
+      currentOnly: currentOnlyAvg,
+      renewed: renewedAvg,
+      difference: renewedAvg - currentOnlyAvg,
+    },
+    upgradeDowngradeRates: {
+      upgraded,
+      downgraded,
+      noChange,
+      upgradeRate,
+      downgradeRate,
+    },
+    pledgeVolatility: {
+      stdDev,
+      variance,
+      coefficientOfVariation,
+    },
+    ageStats: {
+      mean: meanAge,
+      median: medianAge,
+      mode: modeAge,
+    },
+    generationalGiving,
+  };
+}

@@ -110,26 +110,25 @@ export default function UploadPage() {
   const allValidated = files.length > 0 && files.every((f) => f.status === "validated");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
+        <div className="flex items-center gap-3 md:gap-4">
+          <button
+            onClick={() => router.push("/")}
+            className="hover:opacity-80 transition-opacity"
+            title="Go to home"
+          >
             <BimahLogoWithText
-              logoSize={32}
-              textClassName="font-mono text-2xl tracking-tight text-[#0e2546]"
+              logoSize={24}
+              textClassName="font-mono text-xl md:text-2xl tracking-tight text-[#0e2546]"
             />
-            <div className="border-l border-border pl-4">
-              <h1 className="text-2xl font-bold">Upload Pledge Data</h1>
-              <p className="text-muted-foreground text-sm mt-0.5">
-                Upload XLSX or CSV files
-              </p>
-            </div>
+          </button>
+          <div className="border-l border-border pl-3 md:pl-4">
+            <h1 className="text-xl md:text-2xl font-bold">Upload Pledge Data</h1>
+            <p className="text-muted-foreground text-xs md:text-sm mt-0.5">
+              Upload XLSX or CSV files
+            </p>
           </div>
-          {allValidated && (
-            <Button onClick={handleContinue} size="lg">
-              Continue to Dashboard
-            </Button>
-          )}
         </div>
 
         {files.length === 0 ? (
@@ -158,9 +157,9 @@ export default function UploadPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
             <div className="space-y-2">
-              <h2 className="font-semibold">Files</h2>
+              <h2 className="font-semibold text-sm md:text-base">Files</h2>
               {files.map((f, idx) => (
                 <button
                   key={idx}
@@ -210,12 +209,12 @@ export default function UploadPage() {
               {currentFile && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Configure: {currentFile.file.name}</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-lg md:text-xl truncate">Configure: {currentFile.file.name}</CardTitle>
+                    <CardDescription className="text-xs md:text-sm">
                       Map columns to required fields
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="space-y-4 md:space-y-6">
                     {(currentFile.mapping?.age || currentFile.mapping?.pledgeCurrent || currentFile.mapping?.pledgePrior) && (
                       <div className="flex items-start gap-2 p-3 bg-[#fcf7c5] border border-[#f2c41e] rounded-lg text-sm">
                         <Sparkles className="h-4 w-4 text-[#c98109] mt-0.5 flex-shrink-0" />
@@ -271,14 +270,6 @@ export default function UploadPage() {
                       </div>
                     </div>
 
-                    {currentFile.mapping?.age &&
-                      currentFile.mapping?.pledgeCurrent &&
-                      currentFile.mapping?.pledgePrior && (
-                        <div>
-                          <Button onClick={handleValidate}>Validate File</Button>
-                        </div>
-                      )}
-
                     {currentFile.parsed && (
                       <div className="space-y-4">
                         {currentFile.parsed.errors.length > 0 ? (
@@ -303,20 +294,40 @@ export default function UploadPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="rounded-lg border border-green-500/50 bg-green-500/10 p-4">
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 className="h-5 w-5 text-green-600" />
-                              <h3 className="font-semibold text-green-600">
-                                File validated successfully
-                              </h3>
+                          <div className="space-y-4">
+                            <div className="rounded-lg border border-green-500/50 bg-green-500/10 p-4">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                <h3 className="font-semibold text-green-600">
+                                  File validated successfully
+                                </h3>
+                              </div>
+                              <p className="text-sm mt-1">
+                                {currentFile.parsed.rows.length} rows parsed
+                              </p>
                             </div>
-                            <p className="text-sm mt-1">
-                              {currentFile.parsed.rows.length} rows parsed
-                            </p>
+                            {allValidated && (
+                              <div className="flex justify-end">
+                                <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto">
+                                  Continue to Dashboard →
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     )}
+
+                    {currentFile.mapping?.age &&
+                      currentFile.mapping?.pledgeCurrent &&
+                      currentFile.mapping?.pledgePrior &&
+                      !currentFile.parsed && (
+                        <div className="flex justify-end">
+                          <Button onClick={handleValidate} size="lg" className="w-full sm:w-auto">
+                            Validate File →
+                          </Button>
+                        </div>
+                      )}
 
                     {currentFile.preview && currentFile.preview.length > 0 && (
                       <div>

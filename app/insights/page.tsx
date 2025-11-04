@@ -1,0 +1,340 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import type { PledgeRow } from "@/lib/schema/types";
+import { calculateAdvancedInsights } from "@/lib/math/calculations";
+import { ArrowLeft, TrendingUp, TrendingDown, Users, Target, BarChart3, Award } from "lucide-react";
+import { BimahLogoWithText } from "@/components/ui/BimahLogoWithText";
+
+export default function InsightsPage() {
+  const [data, setData] = useState<PledgeRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem("pledgeData");
+    if (!stored) {
+      router.push("/upload");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(stored) as PledgeRow[];
+      setData(parsed);
+    } catch {
+      router.push("/upload");
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (data.length === 0) {
+    router.push("/upload");
+    return null;
+  }
+
+  const insights = calculateAdvancedInsights(data);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatPercent = (value: number) => {
+    return (value * 100).toFixed(1) + "%";
+  };
+
+  const formatNumber = (value: number, decimals: number = 1) => {
+    return value.toFixed(decimals);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
+            <button
+              onClick={() => router.push("/")}
+              className="hover:opacity-80 transition-opacity"
+              title="Go to home"
+            >
+              <BimahLogoWithText
+                logoSize={24}
+                textClassName="font-mono text-xl md:text-2xl tracking-tight text-[#0e2546]"
+              />
+            </button>
+            <div className="border-l border-border pl-3 md:pl-4">
+              <h1 className="text-xl md:text-2xl font-bold">Advanced Insights</h1>
+              <p className="text-muted-foreground text-xs md:text-sm mt-0.5">
+                Deep dive analytics and trends
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" onClick={() => router.push("/dashboard")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        </div>
+
+        {/* Key Metrics Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs md:text-sm flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Retention Rate
+              </CardDescription>
+              <CardTitle className="text-2xl md:text-3xl text-green-600">
+                {formatPercent(insights.retentionRate)}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {data.filter(r => r.status === "renewed").length} renewed ÷ {data.filter(r => r.pledgePrior > 0).length} had prior pledge &gt; $0
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs md:text-sm flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Upgrade Rate
+              </CardDescription>
+              <CardTitle className="text-2xl md:text-3xl text-blue-600">
+                {formatPercent(insights.upgradeDowngradeRates.upgradeRate)}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {insights.upgradeDowngradeRates.upgraded} renewed with increase ÷ all renewed
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs md:text-sm flex items-center gap-2">
+                <TrendingDown className="h-4 w-4" />
+                Downgrade Rate
+              </CardDescription>
+              <CardTitle className="text-2xl md:text-3xl text-orange-600">
+                {formatPercent(insights.upgradeDowngradeRates.downgradeRate)}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {insights.upgradeDowngradeRates.downgraded} renewed with decrease ÷ all renewed
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs md:text-sm flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Mean Age
+              </CardDescription>
+              <CardTitle className="text-2xl md:text-3xl">
+                {formatNumber(insights.ageStats.mean, 0)}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Average of all {data.length} households
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+
+        {/* Pledge Concentration */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+              <Award className="h-5 w-5" />
+              Pledge Concentration Analysis
+            </CardTitle>
+            <CardDescription>
+              Among households with pledges &gt; $0, what % of total dollars comes from the top pledgers?
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="text-sm p-3 bg-muted/50 rounded-lg">
+                <strong>Based on:</strong> {data.filter(r => r.pledgeCurrent > 0).length} households with pledges &gt; $0
+                (out of {data.length} total households)
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg border bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+                  <div className="text-sm font-medium text-yellow-900 mb-1">Top 10% of Pledging Households</div>
+                  <div className="text-xs text-yellow-800 mb-2">
+                    {insights.pledgeConcentration.top10Percent.households} of {data.filter(r => r.pledgeCurrent > 0).length} households
+                  </div>
+                  <div className="text-2xl font-bold text-yellow-700 mb-1">
+                    {formatPercent(insights.pledgeConcentration.top10Percent.percentOfTotal / 100)}
+                  </div>
+                  <div className="text-xs text-yellow-800">
+                    of total dollars = {formatCurrency(insights.pledgeConcentration.top10Percent.amount)}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg border bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                  <div className="text-sm font-medium text-blue-900 mb-1">Top 25% of Pledging Households</div>
+                  <div className="text-xs text-blue-800 mb-2">
+                    {insights.pledgeConcentration.top25Percent.households} of {data.filter(r => r.pledgeCurrent > 0).length} households
+                  </div>
+                  <div className="text-2xl font-bold text-blue-700 mb-1">
+                    {formatPercent(insights.pledgeConcentration.top25Percent.percentOfTotal / 100)}
+                  </div>
+                  <div className="text-xs text-blue-800">
+                    of total dollars = {formatCurrency(insights.pledgeConcentration.top25Percent.amount)}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg border bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                  <div className="text-sm font-medium text-purple-900 mb-1">Top 50% of Pledging Households</div>
+                  <div className="text-xs text-purple-800 mb-2">
+                    {insights.pledgeConcentration.top50Percent.households} of {data.filter(r => r.pledgeCurrent > 0).length} households
+                  </div>
+                  <div className="text-2xl font-bold text-purple-700 mb-1">
+                    {formatPercent(insights.pledgeConcentration.top50Percent.percentOfTotal / 100)}
+                  </div>
+                  <div className="text-xs text-purple-800">
+                    of total dollars = {formatCurrency(insights.pledgeConcentration.top50Percent.amount)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* New vs Renewed Comparison */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Current Year Only vs Renewed Pledgers
+            </CardTitle>
+            <CardDescription>Average current pledge: Current year only vs Renewed (excludes $0 pledges)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-lg border">
+                <div className="text-sm font-medium text-muted-foreground mb-1">Current Year Only Avg</div>
+                <div className="text-2xl font-bold">{formatCurrency(insights.newVsRenewedAverage.currentOnly)}</div>
+              </div>
+
+              <div className="p-4 rounded-lg border">
+                <div className="text-sm font-medium text-muted-foreground mb-1">Renewed Avg</div>
+                <div className="text-2xl font-bold">{formatCurrency(insights.newVsRenewedAverage.renewed)}</div>
+              </div>
+
+              <div className="p-4 rounded-lg border">
+                <div className="text-sm font-medium text-muted-foreground mb-1">Difference</div>
+                <div className={`text-2xl font-bold ${insights.newVsRenewedAverage.difference >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {insights.newVsRenewedAverage.difference >= 0 ? "+" : ""}
+                  {formatCurrency(insights.newVsRenewedAverage.difference)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {insights.newVsRenewedAverage.difference >= 0
+                    ? "Renewed pledgers give more on average"
+                    : "Current year only pledgers give more on average"}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Generational Giving */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg md:text-xl">Generational Giving Patterns</CardTitle>
+            <CardDescription>Current pledges grouped by generation (ages as of current FY, excludes $0)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Generation</th>
+                    <th className="text-left p-2">Age Range</th>
+                    <th className="text-right p-2">Households</th>
+                    <th className="text-right p-2">Total Pledged</th>
+                    <th className="text-right p-2">Average Pledge</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {insights.generationalGiving.filter(g => g.count > 0).map((gen) => (
+                    <tr key={gen.generation} className="border-b hover:bg-muted/50">
+                      <td className="p-2 font-medium">{gen.generation}</td>
+                      <td className="p-2 text-muted-foreground">{gen.ageRange}</td>
+                      <td className="text-right p-2">{gen.count}</td>
+                      <td className="text-right p-2">{formatCurrency(gen.totalPledge)}</td>
+                      <td className="text-right p-2 font-semibold">{formatCurrency(gen.averagePledge)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pledge Volatility */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg md:text-xl">Pledge Change Volatility</CardTitle>
+            <CardDescription>How much do renewed pledges vary? (current minus prior, renewed only)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-lg border">
+                <div className="text-sm font-medium text-muted-foreground mb-1">Standard Deviation</div>
+                <div className="text-xl font-bold">{formatCurrency(insights.pledgeVolatility.stdDev)}</div>
+                <div className="text-xs text-muted-foreground mt-1">Avg distance from mean change</div>
+              </div>
+
+              <div className="p-4 rounded-lg border">
+                <div className="text-sm font-medium text-muted-foreground mb-1">Variance</div>
+                <div className="text-xl font-bold">{formatNumber(insights.pledgeVolatility.variance, 0)}</div>
+                <div className="text-xs text-muted-foreground mt-1">Std dev squared</div>
+              </div>
+
+              <div className="p-4 rounded-lg border">
+                <div className="text-sm font-medium text-muted-foreground mb-1">Coefficient of Variation</div>
+                <div className="text-xl font-bold">{formatNumber(insights.pledgeVolatility.coefficientOfVariation, 2)}</div>
+                <div className="text-xs text-muted-foreground mt-1">Std dev ÷ mean (higher = more variable)</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Average Pledge by Age Cohort */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg md:text-xl">Average Pledge by Age Cohort</CardTitle>
+            <CardDescription>Mean current pledge per age group (excludes $0 pledges)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {insights.averagePledgeByAge.map((cohort) => (
+                <div key={cohort.cohort} className="p-3 rounded-lg border text-center">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">{cohort.cohort}</div>
+                  <div className="text-lg font-bold">{formatCurrency(cohort.average)}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

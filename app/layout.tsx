@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Bimah BC - Pledge Analytics",
+  title: "Bimah: Beth Chaim - Pledge Analytics",
   description: "Synagogue pledge analytics and reporting for Beth Chaim",
 };
 
