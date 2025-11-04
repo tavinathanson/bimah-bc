@@ -124,10 +124,22 @@ export default function UploadPage() {
             />
           </button>
           <div className="border-l border-border pl-3 md:pl-4">
-            <h1 className="text-xl md:text-2xl font-bold">Upload Pledge Data</h1>
+            <h1 className="text-xl md:text-2xl font-bold">Import Pledge Data</h1>
             <p className="text-muted-foreground text-xs md:text-sm mt-0.5">
-              Upload XLSX or CSV files
+              Load XLSX or CSV files
             </p>
+          </div>
+        </div>
+
+        {/* Privacy Notice */}
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 md:p-4">
+          <div className="flex items-center gap-2">
+            <svg className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <div className="text-xs md:text-sm text-green-900">
+              <strong>Your data stays private:</strong> Files are processed entirely in your browser and never sent to any server.
+            </div>
           </div>
         </div>
 

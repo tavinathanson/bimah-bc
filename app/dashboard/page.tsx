@@ -86,10 +86,10 @@ export default function DashboardPage() {
               <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h2 className="text-xl font-semibold mb-2">No Data Found</h2>
               <p className="text-muted-foreground mb-4">
-                Please upload and validate files first.
+                Please import and validate files first.
               </p>
               <Button onClick={() => router.push("/upload")}>
-                Go to Upload
+                Go to Import
               </Button>
             </div>
           </CardContent>
@@ -301,7 +301,7 @@ export default function DashboardPage() {
           <div className="flex gap-2 overflow-x-auto pb-1">
             <Button variant="outline" onClick={() => router.push("/upload")} className="whitespace-nowrap">
               <ArrowLeft className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">Back to Upload</span>
+              <span className="hidden md:inline">Back to Import</span>
             </Button>
             <Button variant="outline" onClick={() => router.push("/insights")} className="whitespace-nowrap">
               <span className="hidden md:inline">Insights</span>
@@ -579,7 +579,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-[#1886d9] flex-shrink-0" />
             <div className="text-xs md:text-sm text-[#0e2546]">
-              <strong>Note:</strong> Time-based pledge progress requires gift dates; this version computes a snapshot from the uploaded files.
+              <strong>Note:</strong> Time-based pledge progress requires gift dates; this version computes a snapshot from the imported files.
             </div>
           </div>
         </div>
