@@ -40,8 +40,8 @@ export function classifyStatus(pledgeCurrent: number, pledgePrior: number): Pled
   const hasPrior = pledgePrior > 0;
 
   if (hasCurrent && hasPrior) return "renewed";
-  if (hasCurrent && !hasPrior) return "new";
-  if (!hasCurrent && hasPrior) return "resigned";
+  if (hasCurrent && !hasPrior) return "current-only";
+  if (!hasCurrent && hasPrior) return "prior-only";
   return "no-pledge-both";
 }
 
@@ -134,8 +134,8 @@ export interface TotalsSummary {
   deltaDollar: number;
   deltaPercent: number | null;
   renewed: number;
-  new: number;
-  resigned: number;
+  currentOnly: number;
+  priorOnly: number;
   noPledgeBoth: number;
 }
 
@@ -148,8 +148,8 @@ export function calculateTotals(rows: PledgeRow[]): TotalsSummary {
     totalPledgedPrior > 0 ? (totalPledgedCurrent - totalPledgedPrior) / totalPledgedPrior : null;
 
   const renewed = rows.filter((r) => r.status === "renewed").length;
-  const newCount = rows.filter((r) => r.status === "new").length;
-  const resigned = rows.filter((r) => r.status === "resigned").length;
+  const currentOnly = rows.filter((r) => r.status === "current-only").length;
+  const priorOnly = rows.filter((r) => r.status === "prior-only").length;
   const noPledgeBoth = rows.filter((r) => r.status === "no-pledge-both").length;
 
   return {
@@ -159,8 +159,8 @@ export function calculateTotals(rows: PledgeRow[]): TotalsSummary {
     deltaDollar,
     deltaPercent,
     renewed,
-    new: newCount,
-    resigned,
+    currentOnly,
+    priorOnly,
     noPledgeBoth,
   };
 }
@@ -305,7 +305,7 @@ export interface StatusMetrics {
 }
 
 export function calculateStatusMetrics(rows: PledgeRow[]): StatusMetrics[] {
-  const statuses: PledgeStatus[] = ["renewed", "new", "resigned", "no-pledge-both"];
+  const statuses: PledgeStatus[] = ["renewed", "current-only", "prior-only", "no-pledge-both"];
 
   return statuses.map((status) => {
     const statusRows = rows.filter((r) => r.status === status);

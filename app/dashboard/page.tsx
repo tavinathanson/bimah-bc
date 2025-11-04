@@ -42,11 +42,14 @@ export default function DashboardPage() {
   const [filterChange, setFilterChange] = useState<string>("all");
 
   // Advanced filters
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAgeAdvanced, setShowAgeAdvanced] = useState(false);
+  const [showPledgeAdvanced, setShowPledgeAdvanced] = useState(false);
   const [pledgeMode, setPledgeMode] = useState<"bins" | "custom">("bins");
   const [filterBin, setFilterBin] = useState<string>("all");
   const [minPledge, setMinPledge] = useState<string>("");
   const [maxPledge, setMaxPledge] = useState<string>("");
+  const [minAge, setMinAge] = useState<string>("");
+  const [maxAge, setMaxAge] = useState<string>("");
   const [showDefinitions, setShowDefinitions] = useState(false);
 
   useEffect(() => {
@@ -98,10 +101,18 @@ export default function DashboardPage() {
   // Apply filters
   const minPledgeNum = minPledge ? parseFloat(minPledge) : 0;
   const maxPledgeNum = maxPledge ? parseFloat(maxPledge) : Infinity;
+  const minAgeNum = minAge ? parseInt(minAge) : 0;
+  const maxAgeNum = maxAge ? parseInt(maxAge) : Infinity;
 
   const filteredData = data.filter((row) => {
-    // Cohort filter
-    if (filterCohort !== "all" && getAgeCohort(row.age) !== filterCohort) {
+    // Cohort filter (overridden by custom age range if set)
+    if (minAge || maxAge) {
+      // Custom age range
+      if (row.age < minAgeNum || row.age > maxAgeNum) {
+        return false;
+      }
+    } else if (filterCohort !== "all" && getAgeCohort(row.age) !== filterCohort) {
+      // Standard cohort filter
       return false;
     }
 
@@ -131,7 +142,8 @@ export default function DashboardPage() {
   });
 
   const hasActiveFilters = filterCohort !== "all" || filterStatus !== "all" ||
-    filterChange !== "all" || filterBin !== "all" || minPledge !== "" || maxPledge !== "";
+    filterChange !== "all" || filterBin !== "all" || minPledge !== "" || maxPledge !== "" ||
+    minAge !== "" || maxAge !== "";
 
   const clearFilters = () => {
     setFilterCohort("all");
@@ -140,14 +152,16 @@ export default function DashboardPage() {
     setFilterBin("all");
     setMinPledge("");
     setMaxPledge("");
+    setMinAge("");
+    setMaxAge("");
     setPledgeMode("bins");
   };
 
   // Smart chart visibility
-  const showCohortChart = filterCohort === "all";
+  const showCohortChart = filterCohort === "all" && !minAge && !maxAge;
   const showStatusChart = filterStatus === "all";
   const showBinChart = filterBin === "all" && pledgeMode !== "custom";
-  const showChangeChart = filterStatus === "all" || filterStatus === "renewed";
+  const showChangeChart = filterChange === "all" && (filterStatus === "all" || filterStatus === "renewed");
 
   const totals = calculateTotals(filteredData);
   const cohortMetrics = calculateCohortMetrics(filteredData);
@@ -296,7 +310,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardContent className="p-4 space-y-3">
-            {/* Quick Filters */}
+            {/* Main Filter Bar */}
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
@@ -310,17 +324,35 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              <Select
-                value={filterCohort}
-                onChange={(e) => setFilterCohort(e.target.value)}
-                className="w-36"
-              >
-                <option value="all">All Ages</option>
-                <option value="Under 40">Under 40</option>
-                <option value="40-49">40-49</option>
-                <option value="50-64">50-64</option>
-                <option value="65+">65+</option>
-              </Select>
+              {/* Age Filter with Custom Option */}
+              <div className="flex items-center gap-2">
+                <Select
+                  value={filterCohort}
+                  onChange={(e) => {
+                    setFilterCohort(e.target.value);
+                    if (e.target.value !== "all") {
+                      setMinAge("");
+                      setMaxAge("");
+                    }
+                  }}
+                  className="w-36"
+                  disabled={!!minAge || !!maxAge}
+                >
+                  <option value="all">All Ages</option>
+                  <option value="Under 40">Under 40</option>
+                  <option value="40-49">40-49</option>
+                  <option value="50-64">50-64</option>
+                  <option value="65+">65+</option>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAgeAdvanced(!showAgeAdvanced)}
+                  className="gap-1"
+                >
+                  {showAgeAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </Button>
+              </div>
 
               <Select
                 value={filterStatus}
@@ -329,8 +361,8 @@ export default function DashboardPage() {
               >
                 <option value="all">All Status</option>
                 <option value="renewed">Renewed</option>
-                <option value="new">New</option>
-                <option value="resigned">Resigned</option>
+                <option value="current-only">Current Year Only</option>
+                <option value="prior-only">Prior Year Only</option>
                 <option value="no-pledge-both">No Pledge</option>
               </Select>
 
@@ -345,15 +377,37 @@ export default function DashboardPage() {
                 <option value="no-change">No Change</option>
               </Select>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="gap-1"
-              >
-                {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                Pledge Amount
-              </Button>
+              {/* Pledge Amount Filter with Custom Option */}
+              <div className="flex items-center gap-2">
+                <Select
+                  value={filterBin}
+                  onChange={(e) => {
+                    setFilterBin(e.target.value);
+                    if (e.target.value !== "all") {
+                      setPledgeMode("bins");
+                      setMinPledge("");
+                      setMaxPledge("");
+                    }
+                  }}
+                  className="w-40"
+                  disabled={pledgeMode === "custom"}
+                >
+                  <option value="all">All Pledges</option>
+                  <option value="$1-$1,799">$1-$1,799</option>
+                  <option value="$1,800-$2,499">$1,800-$2,499</option>
+                  <option value="$2,500-$3,599">$2,500-$3,599</option>
+                  <option value="$3,600-$5,399">$3,600-$5,399</option>
+                  <option value="$5,400+">$5,400+</option>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPledgeAdvanced(!showPledgeAdvanced)}
+                  className="gap-1"
+                >
+                  {showPledgeAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </Button>
+              </div>
 
               {hasActiveFilters && (
                 <>
@@ -373,6 +427,41 @@ export default function DashboardPage() {
               )}
             </div>
 
+            {/* Custom Age Range */}
+            {showAgeAdvanced && (
+              <div className="border-t pt-3">
+                <label className="text-sm font-medium mb-2 block">Custom Age Range</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={minAge}
+                    onChange={(e) => {
+                      setMinAge(e.target.value);
+                      if (e.target.value) setFilterCohort("all");
+                    }}
+                    className="w-28"
+                  />
+                  <span className="text-sm text-muted-foreground">to</span>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={maxAge}
+                    onChange={(e) => {
+                      setMaxAge(e.target.value);
+                      if (e.target.value) setFilterCohort("all");
+                    }}
+                    className="w-28"
+                  />
+                </div>
+                {(minAge || maxAge) && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Custom range overrides standard cohorts
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Definitions */}
             {showDefinitions && (
               <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-3">
@@ -380,8 +469,8 @@ export default function DashboardPage() {
                   <h4 className="font-semibold mb-2">Status Definitions</h4>
                   <div className="space-y-1 text-muted-foreground">
                     <div><strong className="text-foreground">Renewed:</strong> Pledged &gt; $0 in both current and prior year</div>
-                    <div><strong className="text-foreground">New:</strong> Pledged &gt; $0 in current year, $0 in prior year</div>
-                    <div><strong className="text-foreground">Resigned:</strong> Pledged $0 in current year, &gt; $0 in prior year</div>
+                    <div><strong className="text-foreground">Current Year Only:</strong> Pledged &gt; $0 in current year, $0 in prior year</div>
+                    <div><strong className="text-foreground">Prior Year Only:</strong> Pledged $0 in current year, &gt; $0 in prior year</div>
                     <div><strong className="text-foreground">No Pledge:</strong> Pledged $0 in both years</div>
                   </div>
                 </div>
@@ -422,9 +511,10 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Advanced - Pledge Amount */}
-            {showAdvanced && (
+            {/* Pledge Amount Custom Options */}
+            {showPledgeAdvanced && (
               <div className="border-t pt-3 space-y-3">
+                <label className="text-sm font-medium">Pledge Amount Options</label>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -540,7 +630,7 @@ export default function DashboardPage() {
               <CardDescription>Renewed Households</CardDescription>
               <CardTitle className="text-3xl">{totals.renewed}</CardTitle>
               <CardDescription>
-                {totals.new} new, {totals.resigned} resigned
+                {totals.currentOnly} current only, {totals.priorOnly} prior only
               </CardDescription>
             </CardHeader>
           </Card>
@@ -563,13 +653,37 @@ export default function DashboardPage() {
                       cy="50%"
                       outerRadius={100}
                       label
+                      onClick={(data) => {
+                        // Map display name back to status value
+                        const statusMap: Record<string, string> = {
+                          "Renewed": "renewed",
+                          "Current only": "current-only",
+                          "Prior only": "prior-only",
+                          "No pledge both": "no-pledge-both"
+                        };
+                        const status = statusMap[data.name];
+                        if (status) setFilterStatus(status);
+                      }}
+                      cursor="pointer"
                     >
                       {statusChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
+                    <Legend
+                      onClick={(data) => {
+                        const statusMap: Record<string, string> = {
+                          "Renewed": "renewed",
+                          "Current only": "current-only",
+                          "Prior only": "prior-only",
+                          "No pledge both": "no-pledge-both"
+                        };
+                        const status = statusMap[data.value];
+                        if (status) setFilterStatus(status);
+                      }}
+                      wrapperStyle={{ cursor: "pointer" }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -588,7 +702,20 @@ export default function DashboardPage() {
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="value" fill="#0e69bb" />
+                    <Bar
+                      dataKey="value"
+                      fill="#0e69bb"
+                      onClick={(data) => {
+                        const changeMap: Record<string, string> = {
+                          "Increased": "increased",
+                          "Decreased": "decreased",
+                          "No Change": "no-change"
+                        };
+                        const change = changeMap[data.name];
+                        if (change) setFilterChange(change);
+                      }}
+                      cursor="pointer"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -607,7 +734,14 @@ export default function DashboardPage() {
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="Households" fill="#1886d9" />
+                    <Bar
+                      dataKey="Households"
+                      fill="#1886d9"
+                      onClick={(data) => {
+                        setFilterCohort(data.name);
+                      }}
+                      cursor="pointer"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -640,7 +774,17 @@ export default function DashboardPage() {
                     />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="Households" fill="#e6aa0f" />
+                    <Bar
+                      dataKey="Households"
+                      fill="#e6aa0f"
+                      onClick={(data) => {
+                        // Switch to bins mode and set the filter
+                        setPledgeMode("bins");
+                        setFilterBin(data.name);
+                        setShowPledgeAdvanced(true);
+                      }}
+                      cursor="pointer"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -666,7 +810,7 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {cohortMetrics.map((cohort) => (
+                  {cohortMetrics.filter(c => c.householdCount > 0).map((cohort) => (
                     <tr key={cohort.cohort} className="border-b">
                       <td className="p-2 font-medium">{cohort.cohort}</td>
                       <td className="text-right p-2">{cohort.householdCount}</td>

@@ -111,8 +111,8 @@ export async function generateExcelWorkbook(data: PledgeRow[]): Promise<Blob> {
   summarySheet.getCell(`B${summarySheet.lastRow!.number}`).numFmt = "0.0%";
 
   summarySheet.addRow({ metric: "Renewed", value: totals.renewed, notes: "" });
-  summarySheet.addRow({ metric: "New", value: totals.new, notes: "" });
-  summarySheet.addRow({ metric: "Resigned", value: totals.resigned, notes: "" });
+  summarySheet.addRow({ metric: "Current Year Only", value: totals.currentOnly, notes: "" });
+  summarySheet.addRow({ metric: "Prior Year Only", value: totals.priorOnly, notes: "" });
   summarySheet.addRow({
     metric: "No Pledge (Both Years)",
     value: totals.noPledgeBoth,

@@ -16,7 +16,7 @@ export type RawRow = z.infer<typeof RawRowSchema>;
  */
 export const PledgeRowSchema = RawRowSchema.extend({
   householdKey: z.string(),
-  status: z.enum(["renewed", "new", "resigned", "no-pledge-both"]),
+  status: z.enum(["renewed", "current-only", "prior-only", "no-pledge-both"]),
   changeDollar: z.number(),
   changePercent: z.number().nullable(),
 });
@@ -32,7 +32,7 @@ export type AgeCohort = z.infer<typeof AgeCohort>;
 /**
  * Pledge status
  */
-export const PledgeStatus = z.enum(["renewed", "new", "resigned", "no-pledge-both"]);
+export const PledgeStatus = z.enum(["renewed", "current-only", "prior-only", "no-pledge-both"]);
 export type PledgeStatus = z.infer<typeof PledgeStatus>;
 
 /**
