@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { BimahLogoWithTextLarge } from "@/components/ui/BimahLogoWithTextLarge";
 
 export default function EnterPage() {
   const [passcode, setPasscode] = useState("");
@@ -39,12 +40,15 @@ export default function EnterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Bimah BC</CardTitle>
-          <CardDescription>
-            Pledge Analytics for Beth Chaim
+        <CardHeader className="text-center">
+          <BimahLogoWithTextLarge
+            logoSize={64}
+            className="mb-2"
+          />
+          <CardDescription className="mt-4">
+            Pledge Analytics Dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>

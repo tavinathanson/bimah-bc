@@ -10,6 +10,7 @@ import { getFileHeaders, parseFile, previewFile, guessColumnMapping } from "@/li
 import type { ColumnMapping, ParsedFile } from "@/lib/schema/types";
 import { enrichRows } from "@/lib/math/calculations";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
+import { BimahLogoWithText } from "@/components/ui/BimahLogoWithText";
 
 interface FileState {
   file: File;
@@ -109,14 +110,20 @@ export default function UploadPage() {
   const allValidated = files.length > 0 && files.every((f) => f.status === "validated");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Upload Pledge Data</h1>
-            <p className="text-muted-foreground mt-1">
-              Upload XLSX or CSV files from ShulCloud exports
-            </p>
+          <div className="flex items-center gap-4">
+            <BimahLogoWithText
+              logoSize={32}
+              textClassName="font-mono text-2xl tracking-tight text-[#0e2546]"
+            />
+            <div className="border-l border-border pl-4">
+              <h1 className="text-2xl font-bold">Upload Pledge Data</h1>
+              <p className="text-muted-foreground text-sm mt-0.5">
+                Upload XLSX or CSV files
+              </p>
+            </div>
           </div>
           {allValidated && (
             <Button onClick={handleContinue} size="lg">
@@ -210,9 +217,9 @@ export default function UploadPage() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {(currentFile.mapping?.age || currentFile.mapping?.pledgeCurrent || currentFile.mapping?.pledgePrior) && (
-                      <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                        <Sparkles className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                        <div className="text-blue-900">
+                      <div className="flex items-start gap-2 p-3 bg-[#fcf7c5] border border-[#f2c41e] rounded-lg text-sm">
+                        <Sparkles className="h-4 w-4 text-[#c98109] mt-0.5 flex-shrink-0" />
+                        <div className="text-[#401e09]">
                           <strong>Smart mapping applied!</strong> We auto-detected some columns. Please verify they're correct.
                         </div>
                       </div>

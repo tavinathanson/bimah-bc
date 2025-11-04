@@ -20,8 +20,16 @@ import { generateExcelWorkbook } from "@/lib/export/excelExporter";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import numeral from "numeral";
+import { BimahLogoWithText } from "@/components/ui/BimahLogoWithText";
 
-const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981"];
+// Theme colors - Blue dominant with gold accents (Jewish theme)
+const COLORS = [
+  "#1886d9", // star-blue-500 (primary blue)
+  "#36a5f1", // star-blue-400 (lighter blue)
+  "#e6aa0f", // menorah-gold-500 (gold accent)
+  "#0e69bb", // star-blue-600 (deeper blue)
+  "#f2c41e", // menorah-gold-400 (lighter gold)
+];
 
 export default function DashboardPage() {
   const [data, setData] = useState<PledgeRow[]>([]);
@@ -255,14 +263,20 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Pledge Analytics Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
-              FY26 (July 2025 - June 2026)
-            </p>
+          <div className="flex items-center gap-4">
+            <BimahLogoWithText
+              logoSize={32}
+              textClassName="font-mono text-2xl tracking-tight text-[#0e2546]"
+            />
+            <div className="border-l border-border pl-4">
+              <h1 className="text-2xl font-bold">Pledge Analytics</h1>
+              <p className="text-muted-foreground text-sm mt-0.5">
+                FY26 (July 2025 - June 2026)
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push("/upload")}>
@@ -485,10 +499,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-white/60 backdrop-blur-sm border border-[#bae0ff] rounded-lg p-4">
           <div className="flex items-start gap-2">
-            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-blue-900">
+            <AlertCircle className="h-5 w-5 text-[#1886d9] mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-[#0e2546]">
               <strong>Note:</strong> Time-based pledge progress requires gift dates; this version computes a snapshot from the uploaded files.
             </div>
           </div>
@@ -574,7 +588,7 @@ export default function DashboardPage() {
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="value" fill="#8b5cf6" />
+                    <Bar dataKey="value" fill="#0e69bb" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -593,7 +607,7 @@ export default function DashboardPage() {
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="Households" fill="#3b82f6" />
+                    <Bar dataKey="Households" fill="#1886d9" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -626,7 +640,7 @@ export default function DashboardPage() {
                     />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="Households" fill="#10b981" />
+                    <Bar dataKey="Households" fill="#e6aa0f" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
