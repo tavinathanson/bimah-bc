@@ -201,26 +201,6 @@ export default function DashboardPage() {
     ? calculateZeroPledgeMetrics(filteredData)
     : null;
 
-  const handleExportCSV = () => {
-    const headers = ["Age", "Prior Pledge", "Current Pledge", "Change $", "Change %", "Status"];
-    const rows = filteredData.map((row) => [
-      row.age,
-      row.pledgePrior.toFixed(2),
-      row.pledgeCurrent.toFixed(2),
-      row.changeDollar.toFixed(2),
-      row.changePercent !== null ? (row.changePercent * 100).toFixed(2) + "%" : "n/a",
-      row.status,
-    ]);
-
-    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pledge-data-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   const handleExportExcel = async () => {
     const blob = await generateExcelWorkbook(filteredData);
@@ -233,8 +213,16 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Map status values to user-friendly display names
+  const statusDisplayNames: Record<string, string> = {
+    "renewed": "Renewed",
+    "current-only": "Current only",
+    "prior-only": "Prior only",
+    "no-pledge-both": "No pledge"
+  };
+
   const statusChartData = statusMetrics.map((s) => ({
-    name: s.status.charAt(0).toUpperCase() + s.status.slice(1).replace("-", " "),
+    name: statusDisplayNames[s.status] || s.status,
     value: s.householdCount,
   }));
 
@@ -311,13 +299,10 @@ export default function DashboardPage() {
               <span className="hidden md:inline">Forecasts</span>
               <span className="md:hidden">Forecasts</span>
             </Button>
-            <Button variant="outline" onClick={handleExportCSV} className="whitespace-nowrap">
-              <Download className="h-4 w-4 md:mr-2" />
-              <span className="hidden sm:inline">CSV</span>
-            </Button>
             <Button onClick={handleExportExcel} className="whitespace-nowrap">
-              <FileSpreadsheet className="h-4 w-4 md:mr-2" />
-              <span className="hidden sm:inline">Excel</span>
+              <Download className="h-4 w-4 md:mr-2" />
+              <span className="hidden sm:inline">Export Summary</span>
+              <span className="sm:hidden">Export</span>
             </Button>
           </div>
         </div>
@@ -326,7 +311,7 @@ export default function DashboardPage() {
           <CardContent className="p-3 md:p-4 space-y-3">
             {/* Main Filter Bar */}
             <div className="space-y-3">
-              <div className="flex flex-col md:flex-row md:items-center gap-3 md:flex-wrap">
+              <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">Filters:</span>
@@ -338,62 +323,74 @@ export default function DashboardPage() {
                     <Info className="h-4 w-4" />
                   </button>
                 </div>
+                {hasActiveFilters && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">
+                      Showing <strong className="text-foreground">{filteredData.length}</strong> of {data.length} Households
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="gap-1 h-7"
+                    >
+                      <X className="h-3 w-3" />
+                      Clear All Filters
+                    </Button>
+                  </div>
+                )}
+              </div>
 
-                {/* Age Filter with Custom Option */}
-                <div className="flex items-center gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Status Filter */}
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5 h-7">
+                    <label className={`text-xs font-medium ${filterStatus !== "all" ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
+                      Status
+                    </label>
+                    {filterStatus !== "all" && <span className="text-blue-600 text-sm">●</span>}
+                  </div>
                   <Select
-                    value={filterCohort}
-                    onChange={(e) => {
-                      setFilterCohort(e.target.value);
-                      if (e.target.value !== "all") {
-                        setMinAge("");
-                        setMaxAge("");
-                      }
-                    }}
-                    className="w-full sm:w-36"
-                    disabled={!!minAge || !!maxAge}
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className={`w-full ${filterStatus !== "all" ? "ring-2 ring-blue-400" : ""}`}
                   >
-                    <option value="all">All Ages</option>
-                    <option value="Under 40">Under 40</option>
-                    <option value="40-49">40-49</option>
-                    <option value="50-64">50-64</option>
-                    <option value="65+">65+</option>
+                    <option value="all">All Status</option>
+                    <option value="renewed">Renewed</option>
+                    <option value="current-only">Current Year Only</option>
+                    <option value="prior-only">Prior Year Only</option>
+                    <option value="no-pledge-both">No Pledge</option>
                   </Select>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAgeAdvanced(!showAgeAdvanced)}
-                    className="gap-1 flex-shrink-0"
-                  >
-                    {showAgeAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                  </Button>
                 </div>
 
-                <Select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full sm:w-44"
-                >
-                  <option value="all">All Status</option>
-                  <option value="renewed">Renewed</option>
-                  <option value="current-only">Current Year Only</option>
-                  <option value="prior-only">Prior Year Only</option>
-                  <option value="no-pledge-both">No Pledge</option>
-                </Select>
-
-                <Select
-                  value={filterChange}
-                  onChange={(e) => setFilterChange(e.target.value)}
-                  className="w-full sm:w-36"
-                >
-                  <option value="all">All Changes</option>
-                  <option value="increased">Increased</option>
-                  <option value="decreased">Decreased</option>
-                  <option value="no-change">No Change</option>
-                </Select>
-
-                {/* Pledge Amount Filter with Custom Option */}
-                <div className="flex items-center gap-2">
+                {/* Pledge Amount Filter */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5 h-7">
+                    <div className="flex items-center gap-2">
+                      <label className={`text-xs font-medium ${(filterBin !== "all" || pledgeMode === "custom") ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
+                        Pledge Amount
+                      </label>
+                      {(filterBin !== "all" || pledgeMode === "custom") && <span className="text-blue-600 text-sm">●</span>}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowPledgeAdvanced(!showPledgeAdvanced)}
+                      className="gap-1 h-6 px-2 text-xs shrink-0"
+                    >
+                      {showPledgeAdvanced ? (
+                        <>
+                          <ChevronUp className="h-3 w-3" />
+                          Less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-3 w-3" />
+                          Custom
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <Select
                     value={filterBin}
                     onChange={(e) => {
@@ -404,7 +401,7 @@ export default function DashboardPage() {
                         setMaxPledge("");
                       }
                     }}
-                    className="w-full sm:w-40"
+                    className={`w-full ${(filterBin !== "all" || pledgeMode === "custom") ? "ring-2 ring-blue-400" : ""}`}
                     disabled={pledgeMode === "custom"}
                   >
                     <option value="all">All Pledges</option>
@@ -414,34 +411,116 @@ export default function DashboardPage() {
                     <option value="$3,600-$5,399">$3,600-$5,399</option>
                     <option value="$5,400+">$5,400+</option>
                   </Select>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowPledgeAdvanced(!showPledgeAdvanced)}
-                    className="gap-1 flex-shrink-0"
-                  >
-                    {showPledgeAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                  </Button>
                 </div>
 
-                {hasActiveFilters && (
-                  <>
+                {/* Age Filter */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5 h-7">
+                    <div className="flex items-center gap-2">
+                      <label className={`text-xs font-medium ${(filterCohort !== "all" || !!minAge || !!maxAge) ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
+                        Age
+                      </label>
+                      {(filterCohort !== "all" || !!minAge || !!maxAge) && <span className="text-blue-600 text-sm">●</span>}
+                    </div>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      onClick={clearFilters}
-                      className="gap-1 w-full sm:w-auto"
+                      onClick={() => setShowAgeAdvanced(!showAgeAdvanced)}
+                      className="gap-1 h-6 px-2 text-xs shrink-0"
                     >
-                      <X className="h-3 w-3" />
-                      Clear All
+                      {showAgeAdvanced ? (
+                        <>
+                          <ChevronUp className="h-3 w-3" />
+                          Less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-3 w-3" />
+                          Custom
+                        </>
+                      )}
                     </Button>
-                    <span className="text-sm text-muted-foreground md:ml-auto">
-                      {filteredData.length} of {data.length} households
-                    </span>
-                  </>
-                )}
+                  </div>
+                  <Select
+                    value={filterCohort}
+                    onChange={(e) => {
+                      setFilterCohort(e.target.value);
+                      if (e.target.value !== "all") {
+                        setMinAge("");
+                        setMaxAge("");
+                      }
+                    }}
+                    className={`w-full ${(filterCohort !== "all" || !!minAge || !!maxAge) ? "ring-2 ring-blue-400" : ""}`}
+                    disabled={!!minAge || !!maxAge}
+                  >
+                    <option value="all">All Ages</option>
+                    <option value="Under 40">Under 40</option>
+                    <option value="40-49">40-49</option>
+                    <option value="50-64">50-64</option>
+                    <option value="65+">65+</option>
+                  </Select>
+                </div>
+
+                {/* Change Direction Filter */}
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5 h-7">
+                    <label className={`text-xs font-medium ${filterChange !== "all" ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
+                      Change Direction
+                    </label>
+                    {filterChange !== "all" && <span className="text-blue-600 text-sm">●</span>}
+                  </div>
+                  <Select
+                    value={filterChange}
+                    onChange={(e) => setFilterChange(e.target.value)}
+                    className={`w-full ${filterChange !== "all" ? "ring-2 ring-blue-400" : ""}`}
+                  >
+                    <option value="all">All Changes</option>
+                    <option value="increased">Increased</option>
+                    <option value="decreased">Decreased</option>
+                    <option value="no-change">No Change</option>
+                  </Select>
+                </div>
               </div>
             </div>
+
+            {/* Custom Pledge Range */}
+            {showPledgeAdvanced && (
+              <div className="border-t pt-3">
+                <label className="text-sm font-medium mb-2 block">Custom Pledge Range</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={minPledge}
+                    onChange={(e) => {
+                      setMinPledge(e.target.value);
+                      setPledgeMode("custom");
+                      setFilterBin("all");
+                    }}
+                    className="w-32"
+                  />
+                  <span className="text-sm text-muted-foreground">to</span>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={maxPledge}
+                    onChange={(e) => {
+                      setMaxPledge(e.target.value);
+                      setPledgeMode("custom");
+                      setFilterBin("all");
+                    }}
+                    className="w-32"
+                  />
+                </div>
+                {(minPledge || maxPledge) && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {!minPledge || minPledgeNum === 0
+                      ? "Includes $0 pledges in metrics"
+                      : "Excludes $0 pledges (shown separately)"}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Custom Age Range */}
             {showAgeAdvanced && (
@@ -496,82 +575,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
-
-            {/* Pledge Amount Custom Options */}
-            {showPledgeAdvanced && (
-              <div className="border-t pt-3 space-y-3">
-                <label className="text-sm font-medium">Pledge Amount Options</label>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="pledgeMode"
-                        checked={pledgeMode === "bins"}
-                        onChange={() => setPledgeMode("bins")}
-                        className="h-4 w-4"
-                      />
-                      <span className="text-sm">Standard bins</span>
-                    </label>
-
-                    {pledgeMode === "bins" && (
-                      <Select
-                        value={filterBin}
-                        onChange={(e) => setFilterBin(e.target.value)}
-                        className="w-40"
-                      >
-                        <option value="all">All Bins</option>
-                        <option value="$1-$1,799">$1-$1,799</option>
-                        <option value="$1,800-$2,499">$1,800-$2,499</option>
-                        <option value="$2,500-$3,599">$2,500-$3,599</option>
-                        <option value="$3,600-$5,399">$3,600-$5,399</option>
-                        <option value="$5,400+">$5,400+</option>
-                      </Select>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="pledgeMode"
-                        checked={pledgeMode === "custom"}
-                        onChange={() => setPledgeMode("custom")}
-                        className="h-4 w-4"
-                      />
-                      <span className="text-sm">Custom range</span>
-                    </label>
-
-                    {pledgeMode === "custom" && (
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            placeholder="Min"
-                            value={minPledge}
-                            onChange={(e) => setMinPledge(e.target.value)}
-                            className="w-28"
-                          />
-                          <span className="text-sm text-muted-foreground">to</span>
-                          <Input
-                            type="number"
-                            placeholder="Max"
-                            value={maxPledge}
-                            onChange={(e) => setMaxPledge(e.target.value)}
-                            className="w-28"
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {!minPledge || minPledgeNum === 0
-                            ? "Includes $0 pledges in metrics"
-                            : "Excludes $0 pledges (shown separately)"}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -585,10 +588,25 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <Card>
+          <Card className={hasActiveFilters ? "ring-2 ring-blue-400" : ""}>
             <CardHeader className="pb-2">
-              <CardDescription className="text-xs md:text-sm">Total Households</CardDescription>
-              <CardTitle className="text-2xl md:text-3xl">{totals.totalHouseholds}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardDescription className="text-xs md:text-sm">Total Households</CardDescription>
+                {hasActiveFilters && <span className="text-blue-600 text-sm">●</span>}
+              </div>
+              <CardTitle className="text-2xl md:text-3xl">
+                {totals.totalHouseholds}
+                {hasActiveFilters && (
+                  <span className="text-base md:text-lg text-muted-foreground font-normal ml-2">
+                    of {data.length}
+                  </span>
+                )}
+              </CardTitle>
+              {hasActiveFilters && (
+                <CardDescription className="text-xs text-blue-700 font-medium mt-1">
+                  Filtered view
+                </CardDescription>
+              )}
             </CardHeader>
           </Card>
 
@@ -651,7 +669,7 @@ export default function DashboardPage() {
                           "Renewed": "renewed",
                           "Current only": "current-only",
                           "Prior only": "prior-only",
-                          "No pledge both": "no-pledge-both"
+                          "No pledge": "no-pledge-both"
                         };
                         const status = statusMap[data.name];
                         if (status) setFilterStatus(status);
@@ -676,7 +694,7 @@ export default function DashboardPage() {
                           "Renewed": "renewed",
                           "Current only": "current-only",
                           "Prior only": "prior-only",
-                          "No pledge both": "no-pledge-both"
+                          "No pledge": "no-pledge-both"
                         };
                         const status = statusMap[entry.name];
                         if (status) setFilterStatus(status);
@@ -706,7 +724,7 @@ export default function DashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
-                    <Tooltip formatter={(value) => [`${value} households`, "Count"]} />
+                    <Tooltip formatter={(value) => [`${value} Households`, "Count"]} />
                     <Bar
                       dataKey="value"
                       fill="#0e69bb"

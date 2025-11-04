@@ -166,16 +166,16 @@ The dashboard displays:
 - **Insights page**: Advanced metrics including retention rates, pledge concentration, and generational giving
 - **Forecasts page**: Statistical projections with regression analysis and scenario planning
 
-### 5. Export Reports
+### 5. Export Summary Reports
 
-- **CSV Export**: Raw normalized data with all computed fields
-- **Excel Report**: Multi-sheet workbook including:
+- **Excel Summary Report**: Multi-sheet workbook with aggregated metrics including:
   - Read Me (definitions and documentation)
-  - Summary metrics
+  - Summary metrics (totals, counts, changes)
   - Pledge bin analysis
   - Age cohort analysis
   - Renewal status breakdown
-  - Raw normalized data
+
+**Note**: Individual household data is not included in exports to protect privacy. Only aggregate summary statistics are exported.
 
 ## Data Definitions
 
@@ -205,7 +205,7 @@ Bins use **[inclusive lower, exclusive upper)** boundaries except the last bin:
 - **Renewed**: Pledged > 0 in both current and prior FY
 - **Current Year Only**: Pledged > 0 in current FY, 0 in prior FY
 - **Prior Year Only**: Pledged 0 in current FY, > 0 in prior FY
-- **No-pledge-both**: Pledged 0 in both years
+- **No Pledge**: Pledged 0 in both years
 
 ### Change Direction (Renewed Only)
 

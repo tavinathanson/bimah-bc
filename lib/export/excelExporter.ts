@@ -218,39 +218,6 @@ export async function generateExcelWorkbook(data: PledgeRow[]): Promise<Blob> {
     row.getCell("totalPrior").numFmt = "$#,##0.00";
   });
 
-  // Sheet 6: Raw (Normalized)
-  const rawSheet = workbook.addWorksheet("Raw Normalized Data");
-  rawSheet.columns = [
-    { header: "Age", key: "age", width: 10 },
-    { header: "Prior Pledge", key: "priorPledge", width: 15 },
-    { header: "Current Pledge", key: "currentPledge", width: 15 },
-    { header: "Change $", key: "changeDollar", width: 15 },
-    { header: "Change %", key: "changePercent", width: 12 },
-    { header: "Status", key: "status", width: 20 },
-  ];
-
-  rawSheet.getRow(1).font = { bold: true };
-  rawSheet.getRow(1).fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FFE0E7FF" },
-  };
-
-  data.forEach((row) => {
-    const dataRow = rawSheet.addRow({
-      age: row.age,
-      priorPledge: row.pledgePrior,
-      currentPledge: row.pledgeCurrent,
-      changeDollar: row.changeDollar,
-      changePercent: row.changePercent,
-      status: row.status.charAt(0).toUpperCase() + row.status.slice(1).replace(/-/g, " "),
-    });
-
-    dataRow.getCell("priorPledge").numFmt = "$#,##0.00";
-    dataRow.getCell("currentPledge").numFmt = "$#,##0.00";
-    dataRow.getCell("changeDollar").numFmt = "$#,##0.00";
-    dataRow.getCell("changePercent").numFmt = "0.0%";
-  });
 
   // Generate buffer and return as Blob
   const buffer = await workbook.xlsx.writeBuffer();
