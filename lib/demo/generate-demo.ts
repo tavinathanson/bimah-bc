@@ -1,6 +1,7 @@
 /**
  * Client-side demo data generator for Bimah BC
  * Generates realistic pledge data without needing to import a file
+ * Uses a seeded random number generator for consistent results
  */
 
 import type { RawRow } from "../schema/types";
@@ -16,17 +17,32 @@ const LAST_NAMES = [
   "Klein", "Rosenberg", "Green", "Silver", "Diamond", "Stein", "Wolf",
 ];
 
+/**
+ * Seeded pseudo-random number generator (Mulberry32)
+ * Returns a function that generates consistent random numbers
+ */
+function seededRandom(seed: number) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+let rng = seededRandom(12345); // Default seed
+
 function randomChoice<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]!;
+  return arr[Math.floor(rng() * arr.length)]!;
 }
 
 function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(rng() * (max - min + 1)) + min;
 }
 
 function generateAge(): number {
   // Age distribution weighted toward common synagogue demographics
-  const rand = Math.random();
+  const rand = rng();
   if (rand < 0.10) return randomInt(25, 39);  // 10% Under 40
   if (rand < 0.30) return randomInt(40, 49);  // 20% 40-49
   if (rand < 0.60) return randomInt(50, 64);  // 30% 50-64
@@ -39,8 +55,8 @@ function generatePledge(age: number): number {
   const stdDev = 600;
 
   // Box-Muller transform for normal distribution
-  const u1 = Math.random();
-  const u2 = Math.random();
+  const u1 = rng();
+  const u2 = rng();
   const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 
   let basePledge = mean + z * stdDev;
@@ -61,17 +77,20 @@ function generatePledge(age: number): number {
 
 /**
  * Generate demo pledge data
- * @param numRows Number of household rows to generate (default: 200)
+ * @param numRows Number of household rows to generate (default: 500)
  * @returns Array of RawRow objects ready to use
  */
-export function generateDemoData(numRows = 200): RawRow[] {
+export function generateDemoData(numRows = 500): RawRow[] {
+  // Reset RNG to seed for consistent results
+  rng = seededRandom(12345);
+
   const rows: RawRow[] = [];
 
   for (let i = 0; i < numRows; i++) {
     const age = generateAge();
 
     // Determine status
-    const rand = Math.random();
+    const rand = rng();
     let pledgePrior: number;
     let pledgeCurrent: number;
 
@@ -80,7 +99,7 @@ export function generateDemoData(numRows = 200): RawRow[] {
       pledgePrior = generatePledge(age);
 
       // Most renewals have some change
-      const changeRand = Math.random();
+      const changeRand = rng();
       if (changeRand < 0.45) {
         // 45% increase
         pledgeCurrent = pledgePrior + randomInt(100, 1000);
