@@ -88,10 +88,11 @@ export default function DashboardPage() {
       const savedFilters = sessionStorage.getItem("dashboardFilters");
       if (savedFilters) {
         const filters = JSON.parse(savedFilters);
-        setFilterCohort(filters.filterCohort || []);
-        setFilterStatus(filters.filterStatus || []);
-        setFilterChange(filters.filterChange || []);
-        setFilterBin(filters.filterBin || []);
+        // Migrate old string-based filters ("all") to new array format
+        setFilterCohort(Array.isArray(filters.filterCohort) ? filters.filterCohort : []);
+        setFilterStatus(Array.isArray(filters.filterStatus) ? filters.filterStatus : []);
+        setFilterChange(Array.isArray(filters.filterChange) ? filters.filterChange : []);
+        setFilterBin(Array.isArray(filters.filterBin) ? filters.filterBin : []);
         setPledgeMode(filters.pledgeMode || "bins");
         setMinPledge(filters.minPledge || "");
         setMaxPledge(filters.maxPledge || "");
@@ -358,6 +359,180 @@ export default function DashboardPage() {
     return numeral(value).format("$0,0"); // $500
   };
 
+  // Helper to parse numerical ranges from labels
+  // Handles formats like: "Under 40", "40-49", "65+", "$1-$1,799", "$5,400+"
+  interface ParsedRange {
+    min: number;
+    max: number;
+    hasMin: boolean;
+    hasMax: boolean;
+    original: string;
+  }
+
+  const parseRange = (label: string): ParsedRange | null => {
+    // Remove currency symbols, commas, and spaces for parsing
+    const cleaned = label.replace(/[$,\s]/g, "");
+
+    // Pattern: "Under X" or "< X"
+    if (/^(under|<)/i.test(cleaned)) {
+      const match = cleaned.match(/(\d+)/);
+      if (match) {
+        return { min: 0, max: parseInt(match[1]!), hasMin: false, hasMax: true, original: label };
+      }
+    }
+
+    // Pattern: "X+" or "> X" or "X and up"
+    if (/\d+\+|>\d+/i.test(cleaned)) {
+      const match = cleaned.match(/(\d+)/);
+      if (match) {
+        return { min: parseInt(match[1]!), max: Infinity, hasMin: true, hasMax: false, original: label };
+      }
+    }
+
+    // Pattern: "X-Y" (range)
+    const rangeMatch = cleaned.match(/^(\d+)-(\d+)$/);
+    if (rangeMatch) {
+      return {
+        min: parseInt(rangeMatch[1]!),
+        max: parseInt(rangeMatch[2]!),
+        hasMin: true,
+        hasMax: true,
+        original: label
+      };
+    }
+
+    return null;
+  };
+
+  // Generic smart range summary that works for any numerical ranges
+  const getSmartRangeSummary = (ranges: string[], currencySymbol: string = ""): string => {
+    if (ranges.length === 0) return "";
+    if (ranges.length === 1) return ranges[0]!;
+
+    // Try to parse all ranges
+    const parsed = ranges.map(r => ({ label: r, range: parseRange(r) }));
+    const parseable = parsed.filter(p => p.range !== null);
+
+    // If we can't parse most of them, just show count
+    if (parseable.length < ranges.length * 0.5) {
+      return `${ranges.length} selected`;
+    }
+
+    // Sort by min value
+    const sorted = parseable.sort((a, b) => a.range!.min - b.range!.min);
+
+    // Check if ranges are contiguous (no gaps)
+    let isContiguous = true;
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1]!.range!;
+      const curr = sorted[i]!.range!;
+
+      // Check if current min starts where previous max ended (or overlaps)
+      // Allow some tolerance for different labeling (e.g., 1-1799 followed by 1800-2499)
+      if (curr.min > prev.max + 1) {
+        isContiguous = false;
+        break;
+      }
+    }
+
+    if (isContiguous && sorted.length > 1) {
+      const first = sorted[0]!.range!;
+      const last = sorted[sorted.length - 1]!.range!;
+
+      // Build collapsed range text
+      const formatNum = (num: number) => {
+        if (num === Infinity) return "";
+        if (currencySymbol) {
+          return `${currencySymbol}${num.toLocaleString()}`;
+        }
+        return num.toString();
+      };
+
+      if (!first.hasMin && !last.hasMax) {
+        return "All"; // Full range selected
+      } else if (!first.hasMin) {
+        // Starts from 0/bottom, goes up to last.max (inclusive)
+        return `Up to ${formatNum(last.max)}`;
+      } else if (!last.hasMax) {
+        // Starts at first.min, goes to infinity
+        return `${formatNum(first.min)}+`;
+      } else {
+        // Both bounds are defined - inclusive range
+        return `${formatNum(first.min)}-${formatNum(last.max)}`;
+      }
+    }
+
+    // Non-contiguous ranges - show count
+    return `${ranges.length} ranges`;
+  };
+
+  const getFilterSummaryText = (): string[] => {
+    const summaries: string[] = [];
+
+    if (filterStatus.length > 0) {
+      const statusLabels = {
+        "renewed": "Renewed",
+        "current-only": "New",
+        "prior-only": "Lapsed",
+        "no-pledge-both": "No Pledge"
+      };
+      const labels = filterStatus.map(s => statusLabels[s as keyof typeof statusLabels] || s);
+      summaries.push(`Status: ${labels.join(", ")}`);
+    }
+
+    if (filterBin.length > 0 || pledgeMode === "custom") {
+      if (filterBin.length > 0 && pledgeMode === "custom" && (minPledge || maxPledge)) {
+        const rangeSummary = getSmartRangeSummary(filterBin, "$");
+        const customText = `$${minPledge || "0"}-$${maxPledge || "∞"}`;
+        summaries.push(`Pledge: ${rangeSummary}, ${customText}`);
+      } else if (filterBin.length > 0) {
+        const rangeSummary = getSmartRangeSummary(filterBin, "$");
+        summaries.push(`Pledge: ${rangeSummary}`);
+      } else if (pledgeMode === "custom") {
+        const customText = minPledge && maxPledge
+          ? `$${minPledge}-$${maxPledge}`
+          : minPledge
+          ? `≥$${minPledge}`
+          : maxPledge
+          ? `≤$${maxPledge}`
+          : "custom range";
+        summaries.push(`Pledge: ${customText}`);
+      }
+    }
+
+    if (filterCohort.length > 0 || (ageCustomEnabled && (minAge || maxAge))) {
+      if (filterCohort.length > 0 && ageCustomEnabled && (minAge || maxAge)) {
+        const cohortSummary = getSmartRangeSummary(filterCohort);
+        const customText = `${minAge || "0"}-${maxAge || "∞"}`;
+        summaries.push(`Age: ${cohortSummary}, ${customText}`);
+      } else if (filterCohort.length > 0) {
+        const cohortSummary = getSmartRangeSummary(filterCohort);
+        summaries.push(`Age: ${cohortSummary}`);
+      } else if (ageCustomEnabled) {
+        const customText = minAge && maxAge
+          ? `${minAge}-${maxAge}`
+          : minAge
+          ? `≥${minAge}`
+          : maxAge
+          ? `≤${maxAge}`
+          : "custom range";
+        summaries.push(`Age: ${customText}`);
+      }
+    }
+
+    if (filterChange.length > 0) {
+      const changeLabels = {
+        "increased": "Increased",
+        "decreased": "Decreased",
+        "no-change": "No Change"
+      };
+      const labels = filterChange.map(c => changeLabels[c as keyof typeof changeLabels] || c);
+      summaries.push(`Change: ${labels.join(", ")}`);
+    }
+
+    return summaries;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
@@ -411,7 +586,29 @@ export default function DashboardPage() {
                     className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${filterStatus.length > 0 ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
                   >
                     <span className={filterStatus.length === 0 ? "text-muted-foreground" : ""}>
-                      {filterStatus.length === 0 ? "All Status" : `${filterStatus.length} selected`}
+                      {filterStatus.length === 0
+                        ? "All Status"
+                        : filterStatus.length === 1
+                        ? (() => {
+                            const labels: Record<string, string> = {
+                              "renewed": "Renewed",
+                              "current-only": "New: Current Year Only",
+                              "prior-only": "Lapsed: Prior Year Only",
+                              "no-pledge-both": "No Pledge"
+                            };
+                            return labels[filterStatus[0]!] || filterStatus[0]!;
+                          })()
+                        : filterStatus.length === 2
+                        ? filterStatus.map(s => {
+                            const labels: Record<string, string> = {
+                              "renewed": "Renewed",
+                              "current-only": "New",
+                              "prior-only": "Lapsed",
+                              "no-pledge-both": "No Pledge"
+                            };
+                            return labels[s] || s;
+                          }).join(", ")
+                        : `${filterStatus.length} selected`}
                     </span>
                     <ChevronDown className="h-4 w-4" />
                   </button>
@@ -430,7 +627,7 @@ export default function DashboardPage() {
                         {[
                           { value: "renewed", label: "Renewed" },
                           { value: "current-only", label: "New: Current Year Only" },
-                          { value: "prior-only", label: "Prior Year Only" },
+                          { value: "prior-only", label: "Lapsed: Prior Year Only" },
                           { value: "no-pledge-both", label: "No Pledge" }
                         ].map(option => (
                           <label key={option.value} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer">
@@ -470,10 +667,18 @@ export default function DashboardPage() {
                     <span className={(filterBin.length === 0 && pledgeMode !== "custom") ? "text-muted-foreground" : ""}>
                       {filterBin.length === 0 && pledgeMode !== "custom"
                         ? "All Pledges"
-                        : filterBin.length > 0 && pledgeMode === "custom"
-                        ? `${filterBin.length} + custom`
+                        : filterBin.length > 0 && pledgeMode === "custom" && (minPledge || maxPledge)
+                        ? `${getSmartRangeSummary(filterBin, "$")} + custom`
+                        : filterBin.length > 0
+                        ? getSmartRangeSummary(filterBin, "$")
                         : pledgeMode === "custom"
-                        ? `Custom: $${minPledge || "0"}-$${maxPledge || "∞"}`
+                        ? (minPledge && maxPledge
+                          ? `$${minPledge}-$${maxPledge}`
+                          : minPledge
+                          ? `≥$${minPledge}`
+                          : maxPledge
+                          ? `≤$${maxPledge}`
+                          : "Custom range")
                         : `${filterBin.length} selected`}
                     </span>
                     <ChevronDown className="h-4 w-4" />
@@ -584,10 +789,18 @@ export default function DashboardPage() {
                     <span className={(filterCohort.length === 0 && !ageCustomEnabled) ? "text-muted-foreground" : ""}>
                       {filterCohort.length === 0 && !ageCustomEnabled
                         ? "All Ages"
-                        : filterCohort.length > 0 && ageCustomEnabled
-                        ? `${filterCohort.length} + custom`
+                        : filterCohort.length > 0 && ageCustomEnabled && (minAge || maxAge)
+                        ? `${getSmartRangeSummary(filterCohort)} + custom`
+                        : filterCohort.length > 0
+                        ? getSmartRangeSummary(filterCohort)
                         : ageCustomEnabled
-                        ? `Custom: ${minAge || "0"}-${maxAge || "∞"}`
+                        ? (minAge && maxAge
+                          ? `${minAge}-${maxAge}`
+                          : minAge
+                          ? `≥${minAge}`
+                          : maxAge
+                          ? `≤${maxAge}`
+                          : "Custom range")
                         : `${filterCohort.length} selected`}
                     </span>
                     <ChevronDown className="h-4 w-4" />
@@ -693,7 +906,18 @@ export default function DashboardPage() {
                     className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${filterChange.length > 0 ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
                   >
                     <span className={filterChange.length === 0 ? "text-muted-foreground" : ""}>
-                      {filterChange.length === 0 ? "All Changes" : `${filterChange.length} selected`}
+                      {filterChange.length === 0
+                        ? "All Changes"
+                        : filterChange.length <= 2
+                        ? filterChange.map(c => {
+                            const labels: Record<string, string> = {
+                              "increased": "Increased",
+                              "decreased": "Decreased",
+                              "no-change": "No Change"
+                            };
+                            return labels[c] || c;
+                          }).join(", ")
+                        : "All selected"}
                     </span>
                     <ChevronDown className="h-4 w-4" />
                   </button>
@@ -738,6 +962,25 @@ export default function DashboardPage() {
               </div>
             </div>
 
+
+            {/* Active Filters Summary */}
+            {hasActiveFilters && (
+              <div className="bg-blue-50/80 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <Filter className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-blue-900 mb-1">Active Filters:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {getFilterSummaryText().map((summary, idx) => (
+                        <div key={idx} className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 px-2 py-1 rounded text-xs font-medium">
+                          {summary}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Definitions */}
             {showDefinitions && (
