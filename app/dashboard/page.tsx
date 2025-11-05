@@ -78,12 +78,51 @@ export default function DashboardPage() {
     try {
       const parsed = JSON.parse(stored) as PledgeRow[];
       setData(parsed);
+
+      // Restore filter state
+      const savedFilters = sessionStorage.getItem("dashboardFilters");
+      if (savedFilters) {
+        const filters = JSON.parse(savedFilters);
+        setFilterCohort(filters.filterCohort || "all");
+        setFilterStatus(filters.filterStatus || "all");
+        setFilterChange(filters.filterChange || "all");
+        setFilterBin(filters.filterBin || "all");
+        setPledgeMode(filters.pledgeMode || "bins");
+        setMinPledge(filters.minPledge || "");
+        setMaxPledge(filters.maxPledge || "");
+        setMinAge(filters.minAge || "");
+        setMaxAge(filters.maxAge || "");
+        setShowAgeAdvanced(filters.showAgeAdvanced || false);
+        setShowPledgeAdvanced(filters.showPledgeAdvanced || false);
+        setShowDefinitions(filters.showDefinitions || false);
+      }
     } catch {
       router.push("/import");
     } finally {
       setLoading(false);
     }
   }, [router]);
+
+  // Save filter state whenever it changes
+  useEffect(() => {
+    if (data.length > 0) {
+      const filters = {
+        filterCohort,
+        filterStatus,
+        filterChange,
+        filterBin,
+        pledgeMode,
+        minPledge,
+        maxPledge,
+        minAge,
+        maxAge,
+        showAgeAdvanced,
+        showPledgeAdvanced,
+        showDefinitions,
+      };
+      sessionStorage.setItem("dashboardFilters", JSON.stringify(filters));
+    }
+  }, [data.length, filterCohort, filterStatus, filterChange, filterBin, pledgeMode, minPledge, maxPledge, minAge, maxAge, showAgeAdvanced, showPledgeAdvanced, showDefinitions]);
 
   if (loading) {
     return (
