@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   getPledgeBin,
 } from "@/lib/math/calculations";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { AlertCircle, Filter, X, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { AlertCircle, Filter, X, ChevronDown, ChevronUp, Info, Check } from "lucide-react";
 import { generateExcelWorkbook } from "@/lib/export/excelExporter";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -52,16 +52,21 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Filters
-  const [filterCohort, setFilterCohort] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [filterChange, setFilterChange] = useState<string>("all");
+  // Filters - now support multiple selections
+  const [filterCohort, setFilterCohort] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterChange, setFilterChange] = useState<string[]>([]);
+  const [filterBin, setFilterBin] = useState<string[]>([]);
 
-  // Advanced filters
-  const [showAgeAdvanced, setShowAgeAdvanced] = useState(false);
-  const [showPledgeAdvanced, setShowPledgeAdvanced] = useState(false);
+  // Dropdown open states
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [ageDropdownOpen, setAgeDropdownOpen] = useState(false);
+  const [changeDropdownOpen, setChangeDropdownOpen] = useState(false);
+  const [pledgeDropdownOpen, setPledgeDropdownOpen] = useState(false);
+
+  // Pledge mode
   const [pledgeMode, setPledgeMode] = useState<"bins" | "custom">("bins");
-  const [filterBin, setFilterBin] = useState<string>("all");
+  const [ageCustomEnabled, setAgeCustomEnabled] = useState(false);
   const [minPledge, setMinPledge] = useState<string>("");
   const [maxPledge, setMaxPledge] = useState<string>("");
   const [minAge, setMinAge] = useState<string>("");
@@ -83,17 +88,15 @@ export default function DashboardPage() {
       const savedFilters = sessionStorage.getItem("dashboardFilters");
       if (savedFilters) {
         const filters = JSON.parse(savedFilters);
-        setFilterCohort(filters.filterCohort || "all");
-        setFilterStatus(filters.filterStatus || "all");
-        setFilterChange(filters.filterChange || "all");
-        setFilterBin(filters.filterBin || "all");
+        setFilterCohort(filters.filterCohort || []);
+        setFilterStatus(filters.filterStatus || []);
+        setFilterChange(filters.filterChange || []);
+        setFilterBin(filters.filterBin || []);
         setPledgeMode(filters.pledgeMode || "bins");
         setMinPledge(filters.minPledge || "");
         setMaxPledge(filters.maxPledge || "");
         setMinAge(filters.minAge || "");
         setMaxAge(filters.maxAge || "");
-        setShowAgeAdvanced(filters.showAgeAdvanced || false);
-        setShowPledgeAdvanced(filters.showPledgeAdvanced || false);
         setShowDefinitions(filters.showDefinitions || false);
       }
     } catch {
@@ -116,13 +119,11 @@ export default function DashboardPage() {
         maxPledge,
         minAge,
         maxAge,
-        showAgeAdvanced,
-        showPledgeAdvanced,
         showDefinitions,
       };
       sessionStorage.setItem("dashboardFilters", JSON.stringify(filters));
     }
-  }, [data.length, filterCohort, filterStatus, filterChange, filterBin, pledgeMode, minPledge, maxPledge, minAge, maxAge, showAgeAdvanced, showPledgeAdvanced, showDefinitions]);
+  }, [data.length, filterCohort, filterStatus, filterChange, filterBin, pledgeMode, minPledge, maxPledge, minAge, maxAge, showDefinitions]);
 
   if (loading) {
     return (
@@ -160,63 +161,93 @@ export default function DashboardPage() {
   const maxAgeNum = maxAge ? parseInt(maxAge) : Infinity;
 
   const filteredData = data.filter((row) => {
-    // Cohort filter (overridden by custom age range if set)
-    if (minAge || maxAge) {
-      // Custom age range
-      if (row.age < minAgeNum || row.age > maxAgeNum) {
-        return false;
+    // Age filter - can use cohorts OR custom range (OR both)
+    if (filterCohort.length > 0 || (ageCustomEnabled && (minAge || maxAge))) {
+      let ageMatches = false;
+
+      // Check if matches any selected cohort
+      if (filterCohort.length > 0 && filterCohort.includes(getAgeCohort(row.age))) {
+        ageMatches = true;
       }
-    } else if (filterCohort !== "all" && getAgeCohort(row.age) !== filterCohort) {
-      // Standard cohort filter
+
+      // Check if matches custom range
+      if (ageCustomEnabled && (minAge || maxAge) && row.age >= minAgeNum && row.age <= maxAgeNum) {
+        ageMatches = true;
+      }
+
+      if (!ageMatches) return false;
+    }
+
+    // Status filter - must match one of selected statuses
+    if (filterStatus.length > 0 && !filterStatus.includes(row.status)) {
       return false;
     }
 
-    // Status filter
-    if (filterStatus !== "all" && row.status !== filterStatus) {
-      return false;
-    }
+    // Pledge amount filter - can use bins OR custom range (OR both)
+    if (filterBin.length > 0 || (pledgeMode === "custom" && (minPledge || maxPledge))) {
+      let pledgeMatches = false;
 
-    // Pledge amount filter - two modes
-    if (pledgeMode === "bins" && filterBin !== "all") {
-      const bin = getPledgeBin(row.pledgeCurrent);
-      if (bin !== filterBin) return false;
-    } else if (pledgeMode === "custom") {
-      if (row.pledgeCurrent < minPledgeNum || row.pledgeCurrent > maxPledgeNum) {
-        return false;
+      // Check if matches any selected bin
+      if (filterBin.length > 0) {
+        const bin = getPledgeBin(row.pledgeCurrent);
+        if (filterBin.includes(bin)) {
+          pledgeMatches = true;
+        }
       }
+
+      // Check if matches custom range (only if values are entered)
+      if (pledgeMode === "custom" && (minPledge || maxPledge) && row.pledgeCurrent >= minPledgeNum && row.pledgeCurrent <= maxPledgeNum) {
+        pledgeMatches = true;
+      }
+
+      if (!pledgeMatches) return false;
     }
 
     // Change direction filter (only applies to renewed)
-    if (filterChange !== "all" && row.status === "renewed") {
-      if (filterChange === "increased" && row.changeDollar <= 0) return false;
-      if (filterChange === "decreased" && row.changeDollar >= 0) return false;
-      if (filterChange === "no-change" && row.changeDollar !== 0) return false;
+    if (filterChange.length > 0) {
+      // If not renewed, change filter doesn't apply - exclude these rows
+      if (row.status !== "renewed") {
+        return false;
+      }
+      // For renewed, must match one of selected change directions
+      let changeMatches = false;
+      if (filterChange.includes("increased") && row.changeDollar > 0) changeMatches = true;
+      if (filterChange.includes("decreased") && row.changeDollar < 0) changeMatches = true;
+      if (filterChange.includes("no-change") && row.changeDollar === 0) changeMatches = true;
+      if (!changeMatches) return false;
     }
 
     return true;
   });
 
-  const hasActiveFilters = filterCohort !== "all" || filterStatus !== "all" ||
-    filterChange !== "all" || filterBin !== "all" || minPledge !== "" || maxPledge !== "" ||
-    minAge !== "" || maxAge !== "";
+  const hasActiveFilters = filterCohort.length > 0 || filterStatus.length > 0 ||
+    filterChange.length > 0 || filterBin.length > 0 || pledgeMode === "custom" ||
+    ageCustomEnabled;
 
   const clearFilters = () => {
-    setFilterCohort("all");
-    setFilterStatus("all");
-    setFilterChange("all");
-    setFilterBin("all");
+    setFilterCohort([]);
+    setFilterStatus([]);
+    setFilterChange([]);
+    setFilterBin([]);
     setMinPledge("");
     setMaxPledge("");
     setMinAge("");
     setMaxAge("");
     setPledgeMode("bins");
+    setAgeCustomEnabled(false);
   };
 
-  // Smart chart visibility
-  const showCohortChart = filterCohort === "all" && !minAge && !maxAge;
-  const showStatusChart = filterStatus === "all";
-  const showBinChart = filterBin === "all" && pledgeMode !== "custom";
-  const showChangeChart = filterChange === "all" && (filterStatus === "all" || filterStatus === "renewed");
+  // Smart chart visibility - show when no filters OR multiple filters (comparison is useful)
+  const ageFilterCount = filterCohort.length + (ageCustomEnabled ? 1 : 0);
+  const showCohortChart = ageFilterCount === 0 || ageFilterCount >= 2;
+
+  const showStatusChart = filterStatus.length === 0 || filterStatus.length >= 2;
+
+  const pledgeFilterCount = filterBin.length + (pledgeMode === "custom" ? 1 : 0);
+  const showBinChart = pledgeFilterCount === 0 || pledgeFilterCount >= 2;
+
+  const showChangeChart = (filterChange.length === 0 || filterChange.length >= 2) &&
+    (filterStatus.length === 0 || filterStatus.includes("renewed") || filterStatus.length >= 2);
 
   const totals = calculateTotals(filteredData);
   const cohortMetrics = calculateCohortMetrics(filteredData);
@@ -271,31 +302,39 @@ export default function DashboardPage() {
   // Map status values to user-friendly display names
   const statusDisplayNames: Record<string, string> = {
     "renewed": "Renewed",
-    "current-only": "Current only",
-    "prior-only": "Prior only",
-    "no-pledge-both": "No pledge"
+    "current-only": "New: Current Year Only",
+    "prior-only": "Prior Year Only",
+    "no-pledge-both": "No Pledge"
   };
 
-  const statusChartData = statusMetrics.map((s) => ({
-    name: statusDisplayNames[s.status] || s.status,
-    value: s.householdCount,
-  }));
+  // Filter chart data to only show selected options when filters are active
+  const statusChartData = statusMetrics
+    .filter((s) => filterStatus.length === 0 || filterStatus.includes(s.status))
+    .map((s) => ({
+      name: statusDisplayNames[s.status] || s.status,
+      value: s.householdCount,
+    }));
 
-  const cohortChartData = cohortMetrics.map((c) => ({
-    name: c.cohort,
-    Households: c.householdCount,
-  }));
+  const cohortChartData = cohortMetrics
+    .filter((c) => filterCohort.length === 0 || filterCohort.includes(c.cohort))
+    .map((c) => ({
+      name: c.cohort,
+      Households: c.householdCount,
+    }));
 
-  const binChartData = binMetrics.filter((b) => b.householdCount > 0).map((b) => ({
-    name: b.bin,
-    Households: b.householdCount,
-  }));
+  const binChartData = binMetrics
+    .filter((b) => b.householdCount > 0)
+    .filter((b) => filterBin.length === 0 || filterBin.includes(b.bin))
+    .map((b) => ({
+      name: b.bin,
+      Households: b.householdCount,
+    }));
 
   const changeData = [
     { name: "Increased", value: cohortMetrics.reduce((sum, c) => sum + c.increased, 0) },
     { name: "Decreased", value: cohortMetrics.reduce((sum, c) => sum + c.decreased, 0) },
     { name: "No Change", value: cohortMetrics.reduce((sum, c) => sum + c.noChange, 0) },
-  ];
+  ].filter((d) => filterChange.length === 0 || filterChange.includes(d.name.toLowerCase().replace(" ", "-")));
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -360,235 +399,345 @@ export default function DashboardPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* Status Filter */}
-                <div>
+                <div className="relative">
                   <div className="flex items-center gap-2 mb-1.5 h-7">
-                    <label className={`text-xs font-medium ${filterStatus !== "all" ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
+                    <label className={`text-xs font-medium ${filterStatus.length > 0 ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
                       Status
                     </label>
-                    {filterStatus !== "all" && <span className="text-blue-600 text-sm">●</span>}
+                    {filterStatus.length > 0 && <span className="text-blue-600 text-sm">●</span>}
                   </div>
-                  <Select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className={`w-full ${filterStatus !== "all" ? "ring-2 ring-blue-400" : ""}`}
+                  <button
+                    onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${filterStatus.length > 0 ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
                   >
-                    <option value="all">All Status</option>
-                    <option value="renewed">Renewed</option>
-                    <option value="current-only">Current Year Only</option>
-                    <option value="prior-only">Prior Year Only</option>
-                    <option value="no-pledge-both">No Pledge</option>
-                  </Select>
+                    <span className={filterStatus.length === 0 ? "text-muted-foreground" : ""}>
+                      {filterStatus.length === 0 ? "All Status" : `${filterStatus.length} selected`}
+                    </span>
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                  {statusDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setStatusDropdownOpen(false)} />
+                      <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg">
+                        {filterStatus.length > 0 && (
+                          <button
+                            onClick={() => setFilterStatus([])}
+                            className="w-full px-3 py-2 text-sm text-left text-blue-600 hover:bg-blue-50 border-b font-medium"
+                          >
+                            Clear (show all)
+                          </button>
+                        )}
+                        {[
+                          { value: "renewed", label: "Renewed" },
+                          { value: "current-only", label: "New: Current Year Only" },
+                          { value: "prior-only", label: "Prior Year Only" },
+                          { value: "no-pledge-both", label: "No Pledge" }
+                        ].map(option => (
+                          <label key={option.value} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={filterStatus.includes(option.value)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFilterStatus([...filterStatus, option.value]);
+                                } else {
+                                  setFilterStatus(filterStatus.filter(s => s !== option.value));
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <span className="text-sm">{option.label}</span>
+                            {filterStatus.includes(option.value) && <Check className="h-4 w-4 ml-auto text-blue-600" />}
+                          </label>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Pledge Amount Filter */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5 h-7">
-                    <div className="flex items-center gap-2">
-                      <label className={`text-xs font-medium ${(filterBin !== "all" || pledgeMode === "custom") ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
-                        Pledge Amount
-                      </label>
-                      {(filterBin !== "all" || pledgeMode === "custom") && <span className="text-blue-600 text-sm">●</span>}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowPledgeAdvanced(!showPledgeAdvanced)}
-                      className="gap-1 h-6 px-2 text-xs shrink-0"
-                    >
-                      {showPledgeAdvanced ? (
-                        <>
-                          <ChevronUp className="h-3 w-3" />
-                          Less
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="h-3 w-3" />
-                          Custom
-                        </>
-                      )}
-                    </Button>
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-1.5 h-7">
+                    <label className={`text-xs font-medium ${(filterBin.length > 0 || pledgeMode === "custom") ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
+                      Pledge Amount
+                    </label>
+                    {(filterBin.length > 0 || pledgeMode === "custom") && <span className="text-blue-600 text-sm">●</span>}
                   </div>
-                  <Select
-                    value={pledgeMode === "custom" ? "custom" : filterBin}
-                    onChange={(e) => {
-                      setFilterBin(e.target.value);
-                      if (e.target.value !== "all") {
-                        setPledgeMode("bins");
-                        setMinPledge("");
-                        setMaxPledge("");
-                      }
-                    }}
-                    className={`w-full ${(filterBin !== "all" || pledgeMode === "custom") ? "ring-2 ring-blue-400" : ""}`}
-                    disabled={pledgeMode === "custom"}
+                  <button
+                    onClick={() => setPledgeDropdownOpen(!pledgeDropdownOpen)}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${(filterBin.length > 0 || pledgeMode === "custom") ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
                   >
-                    {pledgeMode === "custom" ? (
-                      <option value="custom">
-                        ${minPledge || "0"}-${maxPledge || "∞"}
-                      </option>
-                    ) : (
-                      <>
-                        <option value="all">All Pledges</option>
-                        <option value="$1-$1,799">$1-$1,799</option>
-                        <option value="$1,800-$2,499">$1,800-$2,499</option>
-                        <option value="$2,500-$3,599">$2,500-$3,599</option>
-                        <option value="$3,600-$5,399">$3,600-$5,399</option>
-                        <option value="$5,400+">$5,400+</option>
-                      </>
-                    )}
-                  </Select>
+                    <span className={(filterBin.length === 0 && pledgeMode !== "custom") ? "text-muted-foreground" : ""}>
+                      {filterBin.length === 0 && pledgeMode !== "custom"
+                        ? "All Pledges"
+                        : filterBin.length > 0 && pledgeMode === "custom"
+                        ? `${filterBin.length} + custom`
+                        : pledgeMode === "custom"
+                        ? `Custom: $${minPledge || "0"}-$${maxPledge || "∞"}`
+                        : `${filterBin.length} selected`}
+                    </span>
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                  {pledgeDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setPledgeDropdownOpen(false)} />
+                      <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg max-h-80 overflow-y-auto">
+                        {(filterBin.length > 0 || pledgeMode === "custom") && (
+                          <button
+                            onClick={() => {
+                              setFilterBin([]);
+                              setMinPledge("");
+                              setMaxPledge("");
+                              setPledgeMode("bins");
+                            }}
+                            className="w-full px-3 py-2 text-sm text-left text-blue-600 hover:bg-blue-50 border-b font-medium"
+                          >
+                            Clear (show all)
+                          </button>
+                        )}
+                        {[
+                          { value: "$1-$1,799", label: "$1-$1,799" },
+                          { value: "$1,800-$2,499", label: "$1,800-$2,499" },
+                          { value: "$2,500-$3,599", label: "$2,500-$3,599" },
+                          { value: "$3,600-$5,399", label: "$3,600-$5,399" },
+                          { value: "$5,400+", label: "$5,400+" }
+                        ].map(option => (
+                          <label key={option.value} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={filterBin.includes(option.value)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFilterBin([...filterBin, option.value]);
+                                } else {
+                                  setFilterBin(filterBin.filter(b => b !== option.value));
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <span className="text-sm">{option.label}</span>
+                            {filterBin.includes(option.value) && <Check className="h-4 w-4 ml-auto text-blue-600" />}
+                          </label>
+                        ))}
+                        <div className="border-t bg-muted/20">
+                          <label className="flex items-start gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={pledgeMode === "custom"}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setPledgeMode("custom");
+                                } else {
+                                  setPledgeMode("bins");
+                                  setMinPledge("");
+                                  setMaxPledge("");
+                                }
+                              }}
+                              className="rounded mt-0.5"
+                            />
+                            <div className="flex-1 flex items-start justify-between">
+                              <div className="flex-1">
+                                <span className="text-sm block mb-2">Custom Range</span>
+                                <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
+                                  <Input
+                                    type="number"
+                                    placeholder="Min"
+                                    value={minPledge}
+                                    onChange={(e) => setMinPledge(e.target.value)}
+                                    className={`w-20 h-8 text-sm ${pledgeMode === "custom" ? "bg-white" : ""}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    disabled={pledgeMode !== "custom"}
+                                  />
+                                  <span className="text-xs text-muted-foreground">to</span>
+                                  <Input
+                                    type="number"
+                                    placeholder="Max"
+                                    value={maxPledge}
+                                    onChange={(e) => setMaxPledge(e.target.value)}
+                                    className={`w-20 h-8 text-sm ${pledgeMode === "custom" ? "bg-white" : ""}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    disabled={pledgeMode !== "custom"}
+                                  />
+                                </div>
+                              </div>
+                              {pledgeMode === "custom" && <Check className="h-4 w-4 ml-2 text-blue-600 flex-shrink-0" />}
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Age Filter */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5 h-7">
-                    <div className="flex items-center gap-2">
-                      <label className={`text-xs font-medium ${(filterCohort !== "all" || !!minAge || !!maxAge) ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
-                        Age
-                      </label>
-                      {(filterCohort !== "all" || !!minAge || !!maxAge) && <span className="text-blue-600 text-sm">●</span>}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowAgeAdvanced(!showAgeAdvanced)}
-                      className="gap-1 h-6 px-2 text-xs shrink-0"
-                    >
-                      {showAgeAdvanced ? (
-                        <>
-                          <ChevronUp className="h-3 w-3" />
-                          Less
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="h-3 w-3" />
-                          Custom
-                        </>
-                      )}
-                    </Button>
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-1.5 h-7">
+                    <label className={`text-xs font-medium ${(filterCohort.length > 0 || ageCustomEnabled) ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
+                      Age
+                    </label>
+                    {(filterCohort.length > 0 || ageCustomEnabled) && <span className="text-blue-600 text-sm">●</span>}
                   </div>
-                  <Select
-                    value={(minAge || maxAge) ? "custom" : filterCohort}
-                    onChange={(e) => {
-                      setFilterCohort(e.target.value);
-                      if (e.target.value !== "all") {
-                        setMinAge("");
-                        setMaxAge("");
-                      }
-                    }}
-                    className={`w-full ${(filterCohort !== "all" || !!minAge || !!maxAge) ? "ring-2 ring-blue-400" : ""}`}
-                    disabled={!!minAge || !!maxAge}
+                  <button
+                    onClick={() => setAgeDropdownOpen(!ageDropdownOpen)}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${(filterCohort.length > 0 || ageCustomEnabled) ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
                   >
-                    {(minAge || maxAge) ? (
-                      <option value="custom">
-                        {minAge || "0"}-{maxAge || "∞"}
-                      </option>
-                    ) : (
-                      <>
-                        <option value="all">All Ages</option>
-                        <option value="Under 40">Under 40</option>
-                        <option value="40-49">40-49</option>
-                        <option value="50-64">50-64</option>
-                        <option value="65+">65+</option>
-                      </>
-                    )}
-                  </Select>
+                    <span className={(filterCohort.length === 0 && !ageCustomEnabled) ? "text-muted-foreground" : ""}>
+                      {filterCohort.length === 0 && !ageCustomEnabled
+                        ? "All Ages"
+                        : filterCohort.length > 0 && ageCustomEnabled
+                        ? `${filterCohort.length} + custom`
+                        : ageCustomEnabled
+                        ? `Custom: ${minAge || "0"}-${maxAge || "∞"}`
+                        : `${filterCohort.length} selected`}
+                    </span>
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                  {ageDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setAgeDropdownOpen(false)} />
+                      <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg max-h-80 overflow-y-auto">
+                        {(filterCohort.length > 0 || ageCustomEnabled) && (
+                          <button
+                            onClick={() => {
+                              setFilterCohort([]);
+                              setMinAge("");
+                              setMaxAge("");
+                              setAgeCustomEnabled(false);
+                            }}
+                            className="w-full px-3 py-2 text-sm text-left text-blue-600 hover:bg-blue-50 border-b font-medium"
+                          >
+                            Clear (show all)
+                          </button>
+                        )}
+                        {[
+                          { value: "Under 40", label: "Under 40" },
+                          { value: "40-49", label: "40-49" },
+                          { value: "50-64", label: "50-64" },
+                          { value: "65+", label: "65+" }
+                        ].map(option => (
+                          <label key={option.value} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={filterCohort.includes(option.value)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFilterCohort([...filterCohort, option.value]);
+                                } else {
+                                  setFilterCohort(filterCohort.filter(c => c !== option.value));
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <span className="text-sm">{option.label}</span>
+                            {filterCohort.includes(option.value) && <Check className="h-4 w-4 ml-auto text-blue-600" />}
+                          </label>
+                        ))}
+                        <div className="border-t bg-muted/20">
+                          <label className="flex items-start gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={ageCustomEnabled}
+                              onChange={(e) => {
+                                setAgeCustomEnabled(e.target.checked);
+                                if (!e.target.checked) {
+                                  setMinAge("");
+                                  setMaxAge("");
+                                }
+                              }}
+                              className="rounded mt-0.5"
+                            />
+                            <div className="flex-1 flex items-start justify-between">
+                              <div className="flex-1">
+                                <span className="text-sm block mb-2">Custom Range</span>
+                                <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
+                                  <Input
+                                    type="number"
+                                    placeholder="Min"
+                                    value={minAge}
+                                    onChange={(e) => setMinAge(e.target.value)}
+                                    className={`w-20 h-8 text-sm ${ageCustomEnabled ? "bg-white" : ""}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    disabled={!ageCustomEnabled}
+                                  />
+                                  <span className="text-xs text-muted-foreground">to</span>
+                                  <Input
+                                    type="number"
+                                    placeholder="Max"
+                                    value={maxAge}
+                                    onChange={(e) => setMaxAge(e.target.value)}
+                                    className={`w-20 h-8 text-sm ${ageCustomEnabled ? "bg-white" : ""}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    disabled={!ageCustomEnabled}
+                                  />
+                                </div>
+                              </div>
+                              {ageCustomEnabled && <Check className="h-4 w-4 ml-2 text-blue-600 flex-shrink-0" />}
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Pledge Change Filter */}
-                <div>
+                <div className="relative">
                   <div className="flex items-center gap-2 mb-1.5 h-7">
-                    <label className={`text-xs font-medium ${filterChange !== "all" ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
+                    <label className={`text-xs font-medium ${filterChange.length > 0 ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
                       Pledge Change
                     </label>
-                    {filterChange !== "all" && <span className="text-blue-600 text-sm">●</span>}
+                    {filterChange.length > 0 && <span className="text-blue-600 text-sm">●</span>}
                   </div>
-                  <Select
-                    value={filterChange}
-                    onChange={(e) => setFilterChange(e.target.value)}
-                    className={`w-full ${filterChange !== "all" ? "ring-2 ring-blue-400" : ""}`}
+                  <button
+                    onClick={() => setChangeDropdownOpen(!changeDropdownOpen)}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${filterChange.length > 0 ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
                   >
-                    <option value="all">All Changes</option>
-                    <option value="increased">Increased</option>
-                    <option value="decreased">Decreased</option>
-                    <option value="no-change">No Change</option>
-                  </Select>
+                    <span className={filterChange.length === 0 ? "text-muted-foreground" : ""}>
+                      {filterChange.length === 0 ? "All Changes" : `${filterChange.length} selected`}
+                    </span>
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                  {changeDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setChangeDropdownOpen(false)} />
+                      <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg">
+                        {filterChange.length > 0 && (
+                          <button
+                            onClick={() => setFilterChange([])}
+                            className="w-full px-3 py-2 text-sm text-left text-blue-600 hover:bg-blue-50 border-b font-medium"
+                          >
+                            Clear (show all)
+                          </button>
+                        )}
+                        {[
+                          { value: "increased", label: "Increased" },
+                          { value: "decreased", label: "Decreased" },
+                          { value: "no-change", label: "No Change" }
+                        ].map(option => (
+                          <label key={option.value} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={filterChange.includes(option.value)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFilterChange([...filterChange, option.value]);
+                                } else {
+                                  setFilterChange(filterChange.filter(c => c !== option.value));
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <span className="text-sm">{option.label}</span>
+                            {filterChange.includes(option.value) && <Check className="h-4 w-4 ml-auto text-blue-600" />}
+                          </label>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Custom Pledge Range */}
-            {showPledgeAdvanced && (
-              <div className="border-t pt-3">
-                <label className="text-sm font-medium mb-2 block">Custom Pledge Range</label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Min"
-                    value={minPledge}
-                    onChange={(e) => {
-                      setMinPledge(e.target.value);
-                      setPledgeMode("custom");
-                      setFilterBin("all");
-                    }}
-                    className="w-32"
-                  />
-                  <span className="text-sm text-muted-foreground">to</span>
-                  <Input
-                    type="number"
-                    placeholder="Max"
-                    value={maxPledge}
-                    onChange={(e) => {
-                      setMaxPledge(e.target.value);
-                      setPledgeMode("custom");
-                      setFilterBin("all");
-                    }}
-                    className="w-32"
-                  />
-                </div>
-                {(minPledge || maxPledge) && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {!minPledge || minPledgeNum === 0
-                      ? "Includes $0 pledges in metrics"
-                      : "Excludes $0 pledges (shown separately)"}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Custom Age Range */}
-            {showAgeAdvanced && (
-              <div className="border-t pt-3">
-                <label className="text-sm font-medium mb-2 block">Custom Age Range</label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Min"
-                    value={minAge}
-                    onChange={(e) => {
-                      setMinAge(e.target.value);
-                      if (e.target.value) setFilterCohort("all");
-                    }}
-                    className="w-28"
-                  />
-                  <span className="text-sm text-muted-foreground">to</span>
-                  <Input
-                    type="number"
-                    placeholder="Max"
-                    value={maxAge}
-                    onChange={(e) => {
-                      setMaxAge(e.target.value);
-                      if (e.target.value) setFilterCohort("all");
-                    }}
-                    className="w-28"
-                  />
-                </div>
-                {(minAge || maxAge) && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Custom range overrides standard cohorts
-                  </p>
-                )}
-              </div>
-            )}
 
             {/* Definitions */}
             {showDefinitions && (
@@ -597,7 +746,7 @@ export default function DashboardPage() {
                   <h4 className="font-semibold mb-2">Status Definitions</h4>
                   <div className="space-y-1 text-muted-foreground">
                     <div><strong className="text-foreground">Renewed:</strong> Pledged &gt; $0 in both current and prior year</div>
-                    <div><strong className="text-foreground">Current Year Only:</strong> Pledged &gt; $0 in current year, $0 in prior year</div>
+                    <div><strong className="text-foreground">New: Current Year Only:</strong> Pledged &gt; $0 in current year, $0 in prior year</div>
                     <div><strong className="text-foreground">Prior Year Only:</strong> Pledged $0 in current year, &gt; $0 in prior year</div>
                     <div><strong className="text-foreground">No Pledge:</strong> Pledged $0 in both years</div>
                   </div>
@@ -741,12 +890,15 @@ export default function DashboardPage() {
                             // Map display name back to status value
                             const statusMap: Record<string, string> = {
                               "Renewed": "renewed",
-                              "Current only": "current-only",
-                              "Prior only": "prior-only",
-                              "No pledge": "no-pledge-both"
+                              "New: Current Year Only": "current-only",
+                              "Prior Year Only": "prior-only",
+                              "No Pledge": "no-pledge-both"
                             };
                             const status = statusMap[data.name];
-                            if (status) setFilterStatus(status);
+                            if (status) {
+                              // Set filter to just this status (drill down)
+                              setFilterStatus([status]);
+                            }
                           }}
                           cursor="pointer"
                         >
@@ -766,12 +918,15 @@ export default function DashboardPage() {
                           onClick={() => {
                             const statusMap: Record<string, string> = {
                               "Renewed": "renewed",
-                              "Current only": "current-only",
-                              "Prior only": "prior-only",
-                              "No pledge": "no-pledge-both"
+                              "New: Current Year Only": "current-only",
+                              "Prior Year Only": "prior-only",
+                              "No Pledge": "no-pledge-both"
                             };
                             const status = statusMap[entry.name];
-                            if (status) setFilterStatus(status);
+                            if (status) {
+                              // Set filter to just this status (drill down)
+                              setFilterStatus([status]);
+                            }
                           }}
                           className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
                         >
@@ -827,7 +982,10 @@ export default function DashboardPage() {
                             "No Change": "no-change"
                           };
                           const change = changeMap[data.name];
-                          if (change) setFilterChange(change);
+                          if (change) {
+                            // Set filter to just this change direction (drill down)
+                            setFilterChange([change]);
+                          }
                         }}
                         cursor="pointer"
                       />
@@ -864,7 +1022,12 @@ export default function DashboardPage() {
                         dataKey="Households"
                         fill="#1886d9"
                         onClick={(data) => {
-                          setFilterCohort(data.name);
+                          // Set filter to just this cohort (drill down)
+                          setFilterCohort([data.name]);
+                          // Clear custom age range when selecting a cohort
+                          setAgeCustomEnabled(false);
+                          setMinAge("");
+                          setMaxAge("");
                         }}
                         cursor="pointer"
                       />
@@ -920,10 +1083,12 @@ export default function DashboardPage() {
                         dataKey="Households"
                         fill="#e6aa0f"
                         onClick={(data) => {
-                          // Switch to bins mode and set the filter
+                          // Set filter to just this bin (drill down)
+                          setFilterBin([data.name]);
+                          // Clear custom pledge range when selecting a bin
                           setPledgeMode("bins");
-                          setFilterBin(data.name);
-                          setShowPledgeAdvanced(true);
+                          setMinPledge("");
+                          setMaxPledge("");
                         }}
                         cursor="pointer"
                       />
