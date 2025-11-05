@@ -308,28 +308,30 @@ npm run check
 
 **Before pushing to GitHub**, run `npm run check` to catch TypeScript and linting errors locally.
 
-## Geography Feature
+## Geographic Analysis
 
-When you include a ZIP Code column in your data, the Geography page becomes available.
+When you include a ZIP Code column in your data, geographic analysis becomes available in the Dashboard.
 
 ### Getting Started
 1. **Import data with ZIP codes**: Ensure your CSV/XLSX includes a ZIP Code column
-2. **Set your location**: Enter your synagogue/organization address on the Geography page
-3. **Analyze**: Interactive map and distance histogram appear automatically
+2. **Go to Dashboard**: The Geographic Analysis section appears below the overview cards
+3. **Set your location**: Expand the section and enter your synagogue/organization address
+4. **Analyze and filter**: Use Dashboard filters to slice geographic data by age, pledge amount, or status
 
-### Interactive Map
-- Visualize household distribution across ZIP codes with circle markers
-- **Circle size** represents household count
-- **Color options**:
-  - **Total Pledge Mode**: Blue scale intensity shows total pledge amount
-  - **% Change Mode**: Green-to-red diverging scale shows year-over-year change
-- Click any circle for detailed ZIP statistics in a popup
-- Your reference location is marked with a standard map pin
-
-### Distance Analysis
-- Histogram showing household distribution by distance from your location
-- Distance bins: 0-2mi, 2-5mi, 5-10mi, 10-20mi, 20+mi
-- Toggle between household count and total pledge metrics
+### Features
+- **Integrated with Dashboard filters**: Geographic visualizations update based on your active filters
+  - Example: Filter to age 30-40 and see only those households on the map
+  - Example: Filter to $1000+ pledges and see distance distribution for major donors
+- **Interactive map**:
+  - Circle markers sized by household count
+  - Color by total pledge (blue scale) or % change (green/red)
+  - Click circles for detailed ZIP statistics
+- **Distance histogram**:
+  - Shows household distribution by distance from your location
+  - Distance bins: 0-2mi, 2-5mi, 5-10mi, 10-20mi, 20+mi
+  - Toggle between household count and total pledge metrics
+- **Collapsible section**: Expand/collapse to save screen space
+- **Location persistence**: Your address is saved for future sessions
 
 ### Privacy & Data
 - **All processing is client-side** - no data uploaded to any server

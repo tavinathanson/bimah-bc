@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { PledgeRow } from "@/lib/schema/types";
@@ -15,13 +16,27 @@ import {
   getPledgeBin,
 } from "@/lib/math/calculations";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { AlertCircle, Filter, X, ChevronDown, ChevronUp, Info, Check } from "lucide-react";
+import { AlertCircle, Filter, X, ChevronDown, ChevronUp, Info, Check, MapPin, Loader2 } from "lucide-react";
 import { generateExcelWorkbook } from "@/lib/export/excelExporter";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import numeral from "numeral";
 import { AppNav } from "@/components/ui/AppNav";
 import { STATUS_DISPLAY_NAMES, STATUS_DISPLAY_NAMES_SHORT, DISPLAY_NAME_TO_STATUS, type StatusValue } from "@/lib/constants/statusDisplayNames";
+import { GeoToggle } from "@/components/dashboard/GeoToggle";
+import type { Coordinates } from "@/lib/geo/geocoding";
+import { hasZipCodeData, aggregateByZipCode, type ZipAggregate } from "@/lib/geo/aggregation";
+import { geocodeZipCode, calculateDistanceFromPoint } from "@/lib/geo/geocoding";
+import { DistanceHistogram } from "@/components/geo/DistanceHistogram";
+
+const ZipMap = dynamic(() => import("@/components/geo/ZipMap").then(mod => ({ default: mod.ZipMap })), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[500px] bg-muted rounded-lg flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  ),
+});
 
 // Theme colors - Blue dominant with gold accents (Jewish theme)
 const COLORS = [
@@ -73,6 +88,24 @@ export default function DashboardPage() {
   const [minAge, setMinAge] = useState<string>("");
   const [maxAge, setMaxAge] = useState<string>("");
   const [showDefinitions, setShowDefinitions] = useState(false);
+
+  // Geographic state
+  const hasZips = hasZipCodeData(data);
+  const [geoEnabled, setGeoEnabled] = useState(false);
+  const [synagogueAddress, setSynagogueAddress] = useState<string | null>(null);
+  const [synagogueCoords, setSynagogueCoords] = useState<Coordinates | null>(null);
+  const [geoAggregates, setGeoAggregates] = useState<ZipAggregate[]>([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+
+  // Geographic filters (only active when location is set)
+  const [filterDistance, setFilterDistance] = useState<string>("all");
+
+  // Enable geo by default when ZIP data is detected
+  useEffect(() => {
+    if (hasZips && data.length > 0) {
+      setGeoEnabled(true);
+    }
+  }, [hasZips, data.length]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem("pledgeData");
@@ -126,6 +159,68 @@ export default function DashboardPage() {
       sessionStorage.setItem("dashboardFilters", JSON.stringify(filters));
     }
   }, [data.length, filterCohort, filterStatus, filterChange, filterBin, pledgeMode, minPledge, maxPledge, minAge, maxAge, showDefinitions]);
+
+  // Track the last geocoded coords to avoid re-geocoding unnecessarily
+  const lastGeocodedCoordsRef = useRef<string | null>(null);
+
+  // Geocode ZIPs when synagogue coords change
+  useEffect(() => {
+    if (!geoEnabled || !hasZips || !synagogueCoords || data.length === 0) {
+      setGeoAggregates([]);
+      return;
+    }
+
+    // Create a stable key for coords to detect actual changes
+    const coordsKey = `${synagogueCoords.lat},${synagogueCoords.lon}`;
+
+    // Skip if we've already geocoded for these coords
+    if (lastGeocodedCoordsRef.current === coordsKey) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const geocodeAllZips = async () => {
+      setIsGeocoding(true);
+
+      // Aggregate by ZIP using ALL data (not filtered - we'll apply filters in render)
+      const zipAggregates = aggregateByZipCode(data);
+      const updatedAggregates: ZipAggregate[] = [];
+
+      for (const agg of zipAggregates) {
+        if (cancelled) break;
+
+        try {
+          const location = await geocodeZipCode(agg.zip);
+          if (location) {
+            const distance = calculateDistanceFromPoint(synagogueCoords, location);
+            updatedAggregates.push({
+              ...agg,
+              coords: { lat: location.lat, lon: location.lon },
+              distanceMiles: distance,
+            });
+          } else {
+            updatedAggregates.push(agg);
+          }
+        } catch (error) {
+          console.error('Error geocoding ZIP', agg.zip, ':', error);
+          updatedAggregates.push(agg);
+        }
+      }
+
+      if (!cancelled) {
+        setGeoAggregates(updatedAggregates);
+        setIsGeocoding(false);
+        lastGeocodedCoordsRef.current = coordsKey;
+      }
+    };
+
+    geocodeAllZips();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [geoEnabled, synagogueCoords?.lat, synagogueCoords?.lon, hasZips, data.length]);
 
   if (loading) {
     return (
@@ -219,12 +314,27 @@ export default function DashboardPage() {
       if (!changeMatches) return false;
     }
 
+    // Distance filter (only applies when geo is enabled and location is set)
+    if (geoEnabled && synagogueCoords && filterDistance !== "all" && row.zipCode) {
+      // Find this ZIP's distance in geoAggregates
+      const geoAgg = geoAggregates.find(g => g.zip === row.zipCode);
+      if (!geoAgg || geoAgg.distanceMiles === undefined) {
+        return false; // Exclude if no distance data
+      }
+
+      const distance = geoAgg.distanceMiles;
+      if (filterDistance === "0-5" && (distance < 0 || distance >= 5)) return false;
+      if (filterDistance === "5-10" && (distance < 5 || distance >= 10)) return false;
+      if (filterDistance === "10-20" && (distance < 10 || distance >= 20)) return false;
+      if (filterDistance === "20+" && distance < 20) return false;
+    }
+
     return true;
   });
 
   const hasActiveFilters = filterCohort.length > 0 || filterStatus.length > 0 ||
     filterChange.length > 0 || filterBin.length > 0 || pledgeMode === "custom" ||
-    ageCustomEnabled;
+    ageCustomEnabled || (geoEnabled && filterDistance !== "all");
 
   const clearFilters = () => {
     setFilterCohort([]);
@@ -237,7 +347,21 @@ export default function DashboardPage() {
     setMaxAge("");
     setPledgeMode("bins");
     setAgeCustomEnabled(false);
+    setFilterDistance("all");
   };
+
+  // Filter geo aggregates based on filteredData
+  const filteredGeoAggregates = geoAggregates.length > 0 && synagogueCoords
+    ? aggregateByZipCode(filteredData).map(filteredAgg => {
+        // Find the corresponding aggregate with coords from geoAggregates
+        const geoAgg = geoAggregates.find(g => g.zip === filteredAgg.zip);
+        return {
+          ...filteredAgg,
+          coords: geoAgg?.coords,
+          distanceMiles: geoAgg?.distanceMiles,
+        };
+      })
+    : [];
 
   // Smart chart visibility - show when no filters OR multiple filters (comparison is useful)
   const ageFilterCount = filterCohort.length + (ageCustomEnabled ? 1 : 0);
@@ -559,7 +683,46 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Geographic Location Setting - Compact */}
+              <div className="border-t pt-2">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground">Geographic:</label>
+                  <button
+                    onClick={() => {
+                      if (!hasZips && !geoEnabled) {
+                        alert("ZIP code data not available in the imported file. Geographic analysis requires a ZIP code column.");
+                      } else {
+                        setGeoEnabled(!geoEnabled);
+                      }
+                    }}
+                    className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded transition-colors ${
+                      geoEnabled
+                        ? "bg-purple-100 text-purple-700"
+                        : hasZips
+                        ? "bg-muted/50 text-muted-foreground hover:bg-muted"
+                        : "bg-muted/30 text-muted-foreground/50 cursor-not-allowed"
+                    }`}
+                    disabled={!hasZips && !geoEnabled}
+                  >
+                    {geoEnabled ? "ON" : "OFF"}
+                  </button>
+                  {geoEnabled && (
+                    <div className="flex-1">
+                      <GeoToggle
+                        onAddressChange={(address, coords) => {
+                          setSynagogueAddress(address);
+                          setSynagogueCoords(coords);
+                        }}
+                      />
+                    </div>
+                  )}
+                  {!hasZips && (
+                    <span className="text-xs text-muted-foreground italic">ZIP code data not available</span>
+                  )}
+                </div>
+              </div>
+
+              <div className={`grid grid-cols-1 md:grid-cols-2 ${geoEnabled && synagogueCoords ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-3`}>
                 {/* Status Filter */}
                 <div className="relative">
                   <div className="flex items-center gap-2 mb-1.5 h-7">
@@ -925,6 +1088,46 @@ export default function DashboardPage() {
                     </>
                   )}
                 </div>
+
+                {/* Distance Filter - only shown when geo is enabled and location is set */}
+                {geoEnabled && synagogueCoords && (
+                  <div className="relative">
+                    <div className="flex items-center gap-2 mb-1.5 h-7">
+                      <label className={`text-xs font-medium ${filterDistance !== "all" ? "text-purple-700 font-semibold" : "text-muted-foreground"}`}>
+                        Distance
+                      </label>
+                      {filterDistance !== "all" && <span className="text-purple-600 text-sm">●</span>}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const select = document.getElementById("distance-select") as HTMLSelectElement;
+                        select?.focus();
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${filterDistance !== "all" ? "ring-2 ring-purple-400 border-purple-400" : ""}`}
+                    >
+                      <span className={filterDistance === "all" ? "text-muted-foreground" : ""}>
+                        {filterDistance === "all" ? "All Distances" :
+                         filterDistance === "0-5" ? "0-5 miles" :
+                         filterDistance === "5-10" ? "5-10 miles" :
+                         filterDistance === "10-20" ? "10-20 miles" :
+                         "20+ miles"}
+                      </span>
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                    <select
+                      id="distance-select"
+                      value={filterDistance}
+                      onChange={(e) => setFilterDistance(e.target.value)}
+                      className="absolute inset-0 w-full opacity-0 cursor-pointer"
+                    >
+                      <option value="all">All Distances</option>
+                      <option value="0-5">0-5 miles</option>
+                      <option value="5-10">5-10 miles</option>
+                      <option value="10-20">10-20 miles</option>
+                      <option value="20+">20+ miles</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1308,6 +1511,58 @@ export default function DashboardPage() {
                       />
                     </BarChart>
                   </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Geographic Map Card */}
+          {geoEnabled && synagogueCoords && filteredGeoAggregates.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-purple-600" />
+                  Geographic Distribution
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {filteredData.length} Households • {synagogueAddress}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isGeocoding ? (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <ZipMap
+                    aggregates={filteredGeoAggregates}
+                    synagogueCoords={synagogueCoords}
+                    synagogueAddress={synagogueAddress || undefined}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Distance Histogram Card */}
+          {geoEnabled && synagogueCoords && filteredGeoAggregates.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-purple-600" />
+                  Distance Distribution
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {filteredData.length} Households
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isGeocoding ? (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <DistanceHistogram aggregates={filteredGeoAggregates} locationName={synagogueAddress || ""} />
                 )}
               </CardContent>
             </Card>

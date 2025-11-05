@@ -103,7 +103,7 @@ export function ZipMap({ aggregates, synagogueCoords, synagogueAddress }: ZipMap
 
   if (!mounted) {
     return (
-      <div className="w-full h-[600px] bg-muted rounded-lg flex items-center justify-center">
+      <div className="w-full h-[300px] bg-muted rounded-lg flex items-center justify-center">
         <p className="text-muted-foreground">Loading map...</p>
       </div>
     );
@@ -111,7 +111,7 @@ export function ZipMap({ aggregates, synagogueCoords, synagogueAddress }: ZipMap
 
   if (withCoords.length === 0) {
     return (
-      <div className="w-full h-[600px] bg-muted rounded-lg flex items-center justify-center">
+      <div className="w-full h-[300px] bg-muted rounded-lg flex items-center justify-center">
         <p className="text-muted-foreground">No ZIP codes with coordinates available</p>
       </div>
     );
@@ -138,7 +138,7 @@ export function ZipMap({ aggregates, synagogueCoords, synagogueAddress }: ZipMap
       </div>
 
       {/* Map */}
-      <div className="w-full h-[600px] rounded-lg overflow-hidden border">
+      <div className="w-full h-[300px] rounded-lg overflow-hidden border">
         <MapContainer
           center={[synagogueCoords.lat, synagogueCoords.lon]}
           zoom={10}

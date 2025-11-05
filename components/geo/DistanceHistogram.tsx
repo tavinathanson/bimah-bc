@@ -55,10 +55,16 @@ export function DistanceHistogram({ aggregates, locationName }: DistanceHistogra
           <Tooltip
             formatter={(value: number) =>
               metric === "households"
-                ? `${value} household${value !== 1 ? "s" : ""}`
+                ? `${value} Households`
                 : numeral(value).format("$0,0")
             }
             labelStyle={{ color: "#000" }}
+            contentStyle={{
+              backgroundColor: "white",
+              border: "1px solid #e5e7eb",
+              borderRadius: "0.5rem",
+              boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+            }}
           />
           <Bar dataKey="value" fill="#3b82f6" />
         </BarChart>
