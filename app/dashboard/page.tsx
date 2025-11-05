@@ -629,6 +629,9 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl">Pledge Status Distribution</CardTitle>
+                <CardDescription className="text-xs">
+                  {filteredData.length} of {data.length} Households
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {statusChartData.length === 0 || statusChartData.every(d => d.value === 0) ? (
@@ -705,6 +708,9 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl">Change Direction (Renewed Only)</CardTitle>
+                <CardDescription className="text-xs">
+                  {filteredData.filter(r => r.status === "renewed").length} Renewed of {filteredData.length} Households
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {changeData.every(d => d.value === 0) ? (
@@ -751,6 +757,9 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl">Households by Age Cohort</CardTitle>
+                <CardDescription className="text-xs">
+                  {filteredData.length} of {data.length} Households
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {cohortChartData.length === 0 || cohortChartData.every(d => d.Households === 0) ? (
@@ -785,6 +794,9 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl">Households by Pledge Bin</CardTitle>
+                <CardDescription className="text-xs">
+                  {filteredData.filter(r => r.pledgeCurrent > 0).length} with Pledges &gt; $0 of {filteredData.length} Households
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {binChartData.length === 0 ? (
