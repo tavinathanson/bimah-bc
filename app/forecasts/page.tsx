@@ -463,7 +463,7 @@ export default function ForecastsPage() {
             <CardHeader>
               <CardTitle className="text-lg md:text-xl flex items-center gap-2">
                 <LineChart className="h-5 w-5" />
-                Prior vs Current Pledge (Renewed Only)
+                Prior vs. Current Pledge (Renewed Only)
               </CardTitle>
               <CardDescription>
                 Linear regression: slope = {regression.slope.toFixed(2)}, R² = {regression.rSquared.toFixed(3)}

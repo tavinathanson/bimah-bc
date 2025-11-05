@@ -370,7 +370,7 @@ export default function DashboardPage() {
                     </Button>
                   </div>
                   <Select
-                    value={filterBin}
+                    value={pledgeMode === "custom" ? "custom" : filterBin}
                     onChange={(e) => {
                       setFilterBin(e.target.value);
                       if (e.target.value !== "all") {
@@ -382,12 +382,20 @@ export default function DashboardPage() {
                     className={`w-full ${(filterBin !== "all" || pledgeMode === "custom") ? "ring-2 ring-blue-400" : ""}`}
                     disabled={pledgeMode === "custom"}
                   >
-                    <option value="all">All Pledges</option>
-                    <option value="$1-$1,799">$1-$1,799</option>
-                    <option value="$1,800-$2,499">$1,800-$2,499</option>
-                    <option value="$2,500-$3,599">$2,500-$3,599</option>
-                    <option value="$3,600-$5,399">$3,600-$5,399</option>
-                    <option value="$5,400+">$5,400+</option>
+                    {pledgeMode === "custom" ? (
+                      <option value="custom">
+                        ${minPledge || "0"}-${maxPledge || "∞"}
+                      </option>
+                    ) : (
+                      <>
+                        <option value="all">All Pledges</option>
+                        <option value="$1-$1,799">$1-$1,799</option>
+                        <option value="$1,800-$2,499">$1,800-$2,499</option>
+                        <option value="$2,500-$3,599">$2,500-$3,599</option>
+                        <option value="$3,600-$5,399">$3,600-$5,399</option>
+                        <option value="$5,400+">$5,400+</option>
+                      </>
+                    )}
                   </Select>
                 </div>
 
@@ -420,7 +428,7 @@ export default function DashboardPage() {
                     </Button>
                   </div>
                   <Select
-                    value={filterCohort}
+                    value={(minAge || maxAge) ? "custom" : filterCohort}
                     onChange={(e) => {
                       setFilterCohort(e.target.value);
                       if (e.target.value !== "all") {
@@ -431,11 +439,19 @@ export default function DashboardPage() {
                     className={`w-full ${(filterCohort !== "all" || !!minAge || !!maxAge) ? "ring-2 ring-blue-400" : ""}`}
                     disabled={!!minAge || !!maxAge}
                   >
-                    <option value="all">All Ages</option>
-                    <option value="Under 40">Under 40</option>
-                    <option value="40-49">40-49</option>
-                    <option value="50-64">50-64</option>
-                    <option value="65+">65+</option>
+                    {(minAge || maxAge) ? (
+                      <option value="custom">
+                        {minAge || "0"}-{maxAge || "∞"}
+                      </option>
+                    ) : (
+                      <>
+                        <option value="all">All Ages</option>
+                        <option value="Under 40">Under 40</option>
+                        <option value="40-49">40-49</option>
+                        <option value="50-64">50-64</option>
+                        <option value="65+">65+</option>
+                      </>
+                    )}
                   </Select>
                 </div>
 
@@ -592,6 +608,9 @@ export default function DashboardPage() {
             <CardHeader className="py-4 md:py-6">
               <CardDescription className="text-xs md:text-sm mb-2">Current Pledges</CardDescription>
               <CardTitle className="text-2xl md:text-3xl">{formatCurrency(totals.totalPledgedCurrent)}</CardTitle>
+              <CardDescription className="text-xs md:text-sm mt-2">
+                Average: {formatCurrency(totals.totalPledgedCurrent / totals.totalHouseholds)}
+              </CardDescription>
             </CardHeader>
           </Card>
 
@@ -615,11 +634,35 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="py-4 md:py-6">
-              <CardDescription className="text-xs md:text-sm mb-2">Renewed Households</CardDescription>
-              <CardTitle className="text-2xl md:text-3xl">{totals.renewed}</CardTitle>
-              <CardDescription className="text-xs md:text-sm mt-2">
-                {totals.currentOnly} current only, {totals.priorOnly} prior only
-              </CardDescription>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-4 min-w-0">
+                  <CardDescription className="text-xs md:text-sm flex-shrink-0">Pledge Status</CardDescription>
+                  <CardDescription className="text-xs text-right truncate min-w-0">
+                    {totals.totalHouseholds} of {data.length} Households
+                  </CardDescription>
+                </div>
+                <div className="flex items-baseline gap-3 md:gap-6 flex-wrap">
+                  <div className="flex-shrink-0">
+                    <CardTitle className="text-2xl md:text-3xl">{totals.renewed}</CardTitle>
+                    <CardDescription className="text-xs mt-1">Renewed</CardDescription>
+                  </div>
+                  <div className="hidden sm:block border-l border-border flex-shrink-0" />
+                  <div className="flex gap-3 md:gap-4 flex-wrap">
+                    <div className="flex-shrink-0">
+                      <div className="font-semibold text-lg">{totals.currentOnly}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">New</div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <div className="font-semibold text-lg">{totals.priorOnly}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Lapsed</div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <div className="font-semibold text-lg">{totals.noPledgeBoth}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">None</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardHeader>
           </Card>
         </div>
@@ -862,7 +905,7 @@ export default function DashboardPage() {
                     <th className="text-left p-2 md:p-2 pl-2">Cohort</th>
                     <th className="text-right p-2 md:p-2">Households</th>
                     <th className="text-right p-2 md:p-2">Total Current</th>
-                    <th className="text-right p-2 md:p-2">Avg Current</th>
+                    <th className="text-right p-2 md:p-2">Average Current</th>
                     <th className="text-right p-2 md:p-2">Median Current</th>
                     <th className="text-right p-2 md:p-2 pr-2">Renewal Rate</th>
                   </tr>

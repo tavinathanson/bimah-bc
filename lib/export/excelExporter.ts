@@ -156,7 +156,7 @@ export async function generateExcelWorkbook(data: PledgeRow[]): Promise<Blob> {
     { header: "Cohort", key: "cohort", width: 15 },
     { header: "Households", key: "households", width: 15 },
     { header: "Total Current", key: "totalCurrent", width: 15 },
-    { header: "Avg Current", key: "avgCurrent", width: 15 },
+    { header: "Avg. Current", key: "avgCurrent", width: 15 },
     { header: "Median Current", key: "medianCurrent", width: 15 },
     { header: "Renewal Rate", key: "renewalRate", width: 15 },
     { header: "Increased", key: "increased", width: 12 },

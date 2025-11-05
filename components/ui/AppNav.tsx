@@ -18,10 +18,10 @@ export function AppNav({ onExport, showExport = false }: AppNavProps) {
 
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div className="flex items-center gap-3 md:gap-4">
+      <div className="flex items-center gap-3 md:gap-4 flex-shrink min-w-0 overflow-hidden">
         <button
           onClick={() => router.push("/")}
-          className="hover:opacity-80 transition-opacity"
+          className="hover:opacity-80 transition-opacity flex-shrink-0"
           title="Go to home"
         >
           <BimahLogoWithText
@@ -29,13 +29,13 @@ export function AppNav({ onExport, showExport = false }: AppNavProps) {
             textClassName="font-mono text-xl md:text-2xl tracking-tight text-[#0e2546]"
           />
         </button>
-        <div className="border-l border-border pl-3 md:pl-4">
-          <h1 className="text-xl md:text-2xl font-bold">
+        <div className="border-l border-border pl-3 md:pl-4 min-w-0 overflow-hidden">
+          <h1 className="text-lg md:text-2xl font-bold truncate">
             {pathname === "/dashboard" && "Pledge Analytics"}
             {pathname === "/insights" && "Advanced Insights"}
             {pathname === "/forecasts" && "Forecasts"}
           </h1>
-          <p className="text-muted-foreground text-xs md:text-sm mt-0.5">
+          <p className="text-muted-foreground text-xs md:text-sm mt-0.5 truncate">
             {pathname === "/dashboard" && "FY26 (July 2025 - June 2026)"}
             {pathname === "/insights" && "Deep dive analytics and trends"}
             {pathname === "/forecasts" && "Projections and scenarios"}
@@ -43,7 +43,7 @@ export function AppNav({ onExport, showExport = false }: AppNavProps) {
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 flex-wrap">
         {/* Main Navigation */}
         <Button
           variant={isActive("/dashboard") ? "default" : "outline"}
@@ -73,7 +73,7 @@ export function AppNav({ onExport, showExport = false }: AppNavProps) {
         </Button>
 
         {/* Divider */}
-        <div className="border-l border-border mx-1" />
+        <div className="border-l border-border mx-1 hidden sm:block" />
 
         {/* Actions */}
         <Button
