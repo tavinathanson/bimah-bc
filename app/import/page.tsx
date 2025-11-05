@@ -104,6 +104,8 @@ export default function UploadPage() {
     );
 
     sessionStorage.setItem("pledgeData", JSON.stringify(allRows));
+    // Clear saved filters when new data is imported
+    sessionStorage.removeItem("dashboardFilters");
     router.push("/dashboard");
   };
 
@@ -112,6 +114,8 @@ export default function UploadPage() {
     const demoRows = generateDemoData(500);
     const enrichedRows = enrichRows("Demo Data", demoRows);
     sessionStorage.setItem("pledgeData", JSON.stringify(enrichedRows));
+    // Clear saved filters when demo data is loaded
+    sessionStorage.removeItem("dashboardFilters");
     router.push("/dashboard");
   };
 
