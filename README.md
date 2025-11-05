@@ -22,7 +22,7 @@ Everything runs client-side using JavaScript in your browser. No server interact
   - Total pledges, changes, and renewal rates
   - Age cohort analysis (Under 40, 40-49, 50-64, 65+)
   - Pledge bin distribution ($1-$1,799, $1,800-$2,499, etc.)
-  - Status classification (Renewed, Current Year Only, Prior Year Only)
+  - Status classification (Renewed, New: Current Year Only, Lapsed: Prior Year Only)
   - Change direction tracking (Increased, Decreased, No Change)
   - Advanced insights (retention rates, concentration analysis, generational giving)
   - Statistical forecasts and projections
@@ -160,7 +160,7 @@ Currency symbols, commas, and whitespace are automatically handled during parsin
 The dashboard displays:
 
 - **Summary tiles**: Total households, pledges, changes, and renewal counts
-- **Pie chart**: Pledge status distribution (Renewed, Current Year Only, Prior Year Only)
+- **Pie chart**: Pledge status distribution (Renewed, New: Current Year Only, Lapsed: Prior Year Only)
 - **Bar charts**: Age cohorts, pledge bins, change direction
 - **Tables**: Detailed cohort and bin metrics with sortable columns
 - **Insights page**: Advanced metrics including retention rates, pledge concentration, and generational giving
@@ -203,8 +203,8 @@ Bins use **[inclusive lower, exclusive upper)** boundaries except the last bin:
 ### Status Classifications
 
 - **Renewed**: Pledged > 0 in both current and prior FY
-- **Current Year Only**: Pledged > 0 in current FY, 0 in prior FY
-- **Prior Year Only**: Pledged 0 in current FY, > 0 in prior FY
+- **New: Current Year Only**: Pledged > 0 in current FY, 0 in prior FY
+- **Lapsed: Prior Year Only**: Pledged 0 in current FY, > 0 in prior FY
 - **No Pledge**: Pledged 0 in both years
 
 ### Change Direction (Renewed Only)

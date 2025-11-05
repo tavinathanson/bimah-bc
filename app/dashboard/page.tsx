@@ -21,6 +21,7 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import numeral from "numeral";
 import { AppNav } from "@/components/ui/AppNav";
+import { STATUS_DISPLAY_NAMES, STATUS_DISPLAY_NAMES_SHORT, DISPLAY_NAME_TO_STATUS, type StatusValue } from "@/lib/constants/statusDisplayNames";
 
 // Theme colors - Blue dominant with gold accents (Jewish theme)
 const COLORS = [
@@ -300,19 +301,11 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Map status values to user-friendly display names
-  const statusDisplayNames: Record<string, string> = {
-    "renewed": "Renewed",
-    "current-only": "New: Current Year Only",
-    "prior-only": "Prior Year Only",
-    "no-pledge-both": "No Pledge"
-  };
-
   // Filter chart data to only show selected options when filters are active
   const statusChartData = statusMetrics
     .filter((s) => filterStatus.length === 0 || filterStatus.includes(s.status))
     .map((s) => ({
-      name: statusDisplayNames[s.status] || s.status,
+      name: STATUS_DISPLAY_NAMES[s.status as StatusValue] || s.status,
       value: s.householdCount,
     }));
 
@@ -470,13 +463,7 @@ export default function DashboardPage() {
     const summaries: string[] = [];
 
     if (filterStatus.length > 0) {
-      const statusLabels = {
-        "renewed": "Renewed",
-        "current-only": "New",
-        "prior-only": "Lapsed",
-        "no-pledge-both": "No Pledge"
-      };
-      const labels = filterStatus.map(s => statusLabels[s as keyof typeof statusLabels] || s);
+      const labels = filterStatus.map(s => STATUS_DISPLAY_NAMES_SHORT[s as StatusValue] || s);
       summaries.push(`Status: ${labels.join(", ")}`);
     }
 
@@ -589,25 +576,9 @@ export default function DashboardPage() {
                       {filterStatus.length === 0
                         ? "All Status"
                         : filterStatus.length === 1
-                        ? (() => {
-                            const labels: Record<string, string> = {
-                              "renewed": "Renewed",
-                              "current-only": "New: Current Year Only",
-                              "prior-only": "Lapsed: Prior Year Only",
-                              "no-pledge-both": "No Pledge"
-                            };
-                            return labels[filterStatus[0]!] || filterStatus[0]!;
-                          })()
+                        ? STATUS_DISPLAY_NAMES[filterStatus[0] as StatusValue]
                         : filterStatus.length === 2
-                        ? filterStatus.map(s => {
-                            const labels: Record<string, string> = {
-                              "renewed": "Renewed",
-                              "current-only": "New",
-                              "prior-only": "Lapsed",
-                              "no-pledge-both": "No Pledge"
-                            };
-                            return labels[s] || s;
-                          }).join(", ")
+                        ? filterStatus.map(s => STATUS_DISPLAY_NAMES_SHORT[s as StatusValue]).join(", ")
                         : `${filterStatus.length} selected`}
                     </span>
                     <ChevronDown className="h-4 w-4" />
@@ -624,27 +595,22 @@ export default function DashboardPage() {
                             Clear (show all)
                           </button>
                         )}
-                        {[
-                          { value: "renewed", label: "Renewed" },
-                          { value: "current-only", label: "New: Current Year Only" },
-                          { value: "prior-only", label: "Lapsed: Prior Year Only" },
-                          { value: "no-pledge-both", label: "No Pledge" }
-                        ].map(option => (
-                          <label key={option.value} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                        {(Object.keys(STATUS_DISPLAY_NAMES) as StatusValue[]).map(statusValue => (
+                          <label key={statusValue} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer">
                             <input
                               type="checkbox"
-                              checked={filterStatus.includes(option.value)}
+                              checked={filterStatus.includes(statusValue)}
                               onChange={(e) => {
                                 if (e.target.checked) {
-                                  setFilterStatus([...filterStatus, option.value]);
+                                  setFilterStatus([...filterStatus, statusValue]);
                                 } else {
-                                  setFilterStatus(filterStatus.filter(s => s !== option.value));
+                                  setFilterStatus(filterStatus.filter(s => s !== statusValue));
                                 }
                               }}
                               className="rounded"
                             />
-                            <span className="text-sm">{option.label}</span>
-                            {filterStatus.includes(option.value) && <Check className="h-4 w-4 ml-auto text-blue-600" />}
+                            <span className="text-sm">{STATUS_DISPLAY_NAMES[statusValue]}</span>
+                            {filterStatus.includes(statusValue) && <Check className="h-4 w-4 ml-auto text-blue-600" />}
                           </label>
                         ))}
                       </div>
@@ -988,10 +954,10 @@ export default function DashboardPage() {
                 <div>
                   <h4 className="font-semibold mb-2">Status Definitions</h4>
                   <div className="space-y-1 text-muted-foreground">
-                    <div><strong className="text-foreground">Renewed:</strong> Pledged &gt; $0 in both current and prior year</div>
-                    <div><strong className="text-foreground">New: Current Year Only:</strong> Pledged &gt; $0 in current year, $0 in prior year</div>
-                    <div><strong className="text-foreground">Prior Year Only:</strong> Pledged $0 in current year, &gt; $0 in prior year</div>
-                    <div><strong className="text-foreground">No Pledge:</strong> Pledged $0 in both years</div>
+                    <div><strong className="text-foreground">{STATUS_DISPLAY_NAMES["renewed"]}:</strong> Pledged &gt; $0 in both current and prior year</div>
+                    <div><strong className="text-foreground">{STATUS_DISPLAY_NAMES["current-only"]}:</strong> Pledged &gt; $0 in current year, $0 in prior year</div>
+                    <div><strong className="text-foreground">{STATUS_DISPLAY_NAMES["prior-only"]}:</strong> Pledged $0 in current year, &gt; $0 in prior year</div>
+                    <div><strong className="text-foreground">{STATUS_DISPLAY_NAMES["no-pledge-both"]}:</strong> Pledged $0 in both years</div>
                   </div>
                 </div>
 
@@ -1023,7 +989,24 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        {filteredData.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center py-12">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2">No Households Match Filters</h2>
+                <p className="text-muted-foreground mb-4">
+                  Try adjusting your filter criteria to see results.
+                </p>
+                <Button onClick={clearFilters} variant="outline">
+                  Clear All Filters
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card className={hasActiveFilters ? "border-l-4 border-l-blue-400" : ""}>
             <CardHeader className="py-4 md:py-6">
               <CardDescription className="text-xs md:text-sm mb-2">Total Households</CardDescription>
@@ -1131,13 +1114,7 @@ export default function DashboardPage() {
                           label
                           onClick={(data) => {
                             // Map display name back to status value
-                            const statusMap: Record<string, string> = {
-                              "Renewed": "renewed",
-                              "New: Current Year Only": "current-only",
-                              "Prior Year Only": "prior-only",
-                              "No Pledge": "no-pledge-both"
-                            };
-                            const status = statusMap[data.name];
+                            const status = DISPLAY_NAME_TO_STATUS[data.name];
                             if (status) {
                               // Set filter to just this status (drill down)
                               setFilterStatus([status]);
@@ -1159,13 +1136,7 @@ export default function DashboardPage() {
                         <button
                           key={entry.name}
                           onClick={() => {
-                            const statusMap: Record<string, string> = {
-                              "Renewed": "renewed",
-                              "New: Current Year Only": "current-only",
-                              "Prior Year Only": "prior-only",
-                              "No Pledge": "no-pledge-both"
-                            };
-                            const status = statusMap[entry.name];
+                            const status = DISPLAY_NAME_TO_STATUS[entry.name];
                             if (status) {
                               // Set filter to just this status (drill down)
                               setFilterStatus([status]);
@@ -1462,6 +1433,8 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+          </>
+        )}
       </div>
     </div>
   );

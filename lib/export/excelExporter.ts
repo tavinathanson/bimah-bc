@@ -7,6 +7,7 @@ import {
   calculateStatusMetrics,
 } from "../math/calculations";
 import { FISCAL_YEAR } from "../schema/constants";
+import { STATUS_DISPLAY_NAMES } from "../constants/statusDisplayNames";
 
 export async function generateExcelWorkbook(data: PledgeRow[]): Promise<Blob> {
   const workbook = new ExcelJS.Workbook();
@@ -46,10 +47,10 @@ export async function generateExcelWorkbook(data: PledgeRow[]): Promise<Blob> {
   readMeSheet.addRow(["  • $5,400+: [5400, ∞)"]);
   readMeSheet.addRow([]);
   readMeSheet.addRow(["Status Classifications:"]);
-  readMeSheet.addRow(["  • Renewed: pledged > 0 in both years"]);
-  readMeSheet.addRow(["  • Current Year Only: pledged > 0 in current FY, 0 in prior FY"]);
-  readMeSheet.addRow(["  • Prior Year Only: pledged 0 in current FY, > 0 in prior FY"]);
-  readMeSheet.addRow(["  • No Pledge: 0 in both years"]);
+  readMeSheet.addRow([`  • ${STATUS_DISPLAY_NAMES["renewed"]}: pledged > 0 in both years`]);
+  readMeSheet.addRow([`  • ${STATUS_DISPLAY_NAMES["current-only"]}: pledged > 0 in current FY, 0 in prior FY`]);
+  readMeSheet.addRow([`  • ${STATUS_DISPLAY_NAMES["prior-only"]}: pledged 0 in current FY, > 0 in prior FY`]);
+  readMeSheet.addRow([`  • ${STATUS_DISPLAY_NAMES["no-pledge-both"]}: 0 in both years`]);
   readMeSheet.addRow([]);
   readMeSheet.addRow(["Validation Rules:"]);
   readMeSheet.addRow(["  • Age must be a non-negative integer"]);
@@ -110,11 +111,11 @@ export async function generateExcelWorkbook(data: PledgeRow[]): Promise<Blob> {
   });
   summarySheet.getCell(`B${summarySheet.lastRow!.number}`).numFmt = "0.0%";
 
-  summarySheet.addRow({ metric: "Renewed", value: totals.renewed, notes: "" });
-  summarySheet.addRow({ metric: "Current Year Only", value: totals.currentOnly, notes: "" });
-  summarySheet.addRow({ metric: "Prior Year Only", value: totals.priorOnly, notes: "" });
+  summarySheet.addRow({ metric: STATUS_DISPLAY_NAMES["renewed"], value: totals.renewed, notes: "" });
+  summarySheet.addRow({ metric: STATUS_DISPLAY_NAMES["current-only"], value: totals.currentOnly, notes: "" });
+  summarySheet.addRow({ metric: STATUS_DISPLAY_NAMES["prior-only"], value: totals.priorOnly, notes: "" });
   summarySheet.addRow({
-    metric: "No Pledge (Both Years)",
+    metric: `${STATUS_DISPLAY_NAMES["no-pledge-both"]} (Both Years)`,
     value: totals.noPledgeBoth,
     notes: "",
   });
@@ -206,17 +207,9 @@ export async function generateExcelWorkbook(data: PledgeRow[]): Promise<Blob> {
     fgColor: { argb: "FFE0E7FF" },
   };
 
-  // Map status values to display names matching the dashboard
-  const statusDisplayNames: Record<string, string> = {
-    "renewed": "Renewed",
-    "current-only": "Current Year Only",
-    "prior-only": "Prior Year Only",
-    "no-pledge-both": "No Pledge"
-  };
-
   statusMetrics.forEach((status) => {
     const row = statusSheet.addRow({
-      status: statusDisplayNames[status.status] || status.status,
+      status: STATUS_DISPLAY_NAMES[status.status as keyof typeof STATUS_DISPLAY_NAMES] || status.status,
       households: status.householdCount,
       totalCurrent: status.totalCurrent,
       totalPrior: status.totalPrior,
