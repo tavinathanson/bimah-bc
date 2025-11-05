@@ -494,11 +494,11 @@ export default function DashboardPage() {
                   </Select>
                 </div>
 
-                {/* Change Direction Filter */}
+                {/* Pledge Change Filter */}
                 <div>
                   <div className="flex items-center gap-2 mb-1.5 h-7">
                     <label className={`text-xs font-medium ${filterChange !== "all" ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
-                      Change Direction
+                      Pledge Change
                     </label>
                     {filterChange !== "all" && <span className="text-blue-600 text-sm">●</span>}
                   </div>
@@ -792,7 +792,7 @@ export default function DashboardPage() {
           {showChangeChart && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg md:text-xl">Change Direction (Renewed Only)</CardTitle>
+                <CardTitle className="text-lg md:text-xl">Renewed Pledge Changes</CardTitle>
                 <CardDescription className="text-xs">
                   {filteredData.filter(r => r.status === "renewed").length} Renewed of {filteredData.length} Households
                 </CardDescription>
