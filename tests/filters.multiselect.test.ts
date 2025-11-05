@@ -129,7 +129,7 @@ function applyFilters(
       // Check if matches any selected bin
       if (filterBin.length > 0) {
         const bin = getPledgeBin(row.pledgeCurrent);
-        if (filterBin.includes(bin)) {
+        if (bin && filterBin.includes(bin)) {
           pledgeMatches = true;
         }
       }
@@ -407,13 +407,13 @@ describe("Chart Visibility Logic", () => {
   });
 
   test("cohort chart - hide when 1 filter", () => {
-    const ageFilterCount = 1;
+    const ageFilterCount: number = 1;
     const showCohortChart = ageFilterCount === 0 || ageFilterCount >= 2;
     expect(showCohortChart).toBe(false);
   });
 
   test("cohort chart - show when 2+ filters", () => {
-    const ageFilterCount = 2;
+    const ageFilterCount: number = 2;
     const showCohortChart = ageFilterCount === 0 || ageFilterCount >= 2;
     expect(showCohortChart).toBe(true);
   });

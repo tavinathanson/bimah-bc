@@ -264,7 +264,7 @@ export default function UploadPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4 md:space-y-6">
-                    {(currentFile.mapping?.age || currentFile.mapping?.pledgeCurrent || currentFile.mapping?.pledgePrior) && (
+                    {(currentFile.mapping?.age || currentFile.mapping?.dob || currentFile.mapping?.pledgeCurrent || currentFile.mapping?.pledgePrior) && (
                       <div className="flex items-start gap-2 p-3 bg-[#fcf7c5] border border-[#f2c41e] rounded-lg text-sm">
                         <Sparkles className="h-4 w-4 text-[#c98109] mt-0.5 flex-shrink-0" />
                         <div className="text-[#401e09]">
@@ -274,10 +274,26 @@ export default function UploadPage() {
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Age Column</label>
+                        <label className="text-sm font-medium">
+                          Age / Date of Birth
+                        </label>
                         <Select
-                          value={currentFile.mapping?.age || ""}
-                          onChange={(e) => handleMappingChange("age", e.target.value)}
+                          value={currentFile.mapping?.age || currentFile.mapping?.dob || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const header = value.toLowerCase();
+
+                            // Smart detection: check if this looks like a DOB column
+                            const isDOB = /^(dob|date\s*of\s*birth|birth\s*date|birthday|birth\s*day|bdate)$/i.test(header);
+
+                            if (isDOB) {
+                              handleMappingChange("dob", value);
+                              handleMappingChange("age", "");
+                            } else {
+                              handleMappingChange("age", value);
+                              handleMappingChange("dob", "");
+                            }
+                          }}
                         >
                           <option value="">Select column...</option>
                           {currentFile.headers.map((h) => (
@@ -367,7 +383,7 @@ export default function UploadPage() {
                       </div>
                     )}
 
-                    {currentFile.mapping?.age &&
+                    {(currentFile.mapping?.age || currentFile.mapping?.dob) &&
                       currentFile.mapping?.pledgeCurrent &&
                       currentFile.mapping?.pledgePrior &&
                       !currentFile.parsed && (
@@ -395,11 +411,28 @@ export default function UploadPage() {
                             <tbody>
                               {currentFile.preview.slice(0, 5).map((row, idx) => (
                                 <tr key={idx} className="border-t">
-                                  {Object.values(row).map((val, colIdx) => (
-                                    <td key={colIdx} className="p-2">
-                                      {String(val)}
-                                    </td>
-                                  ))}
+                                  {Object.entries(row).map(([key, val], colIdx) => {
+                                    // Format the value for display
+                                    let displayValue = String(val);
+
+                                    // Check if this is a date column (either Excel serial or date string)
+                                    if (typeof val === 'number' && val > 10000 && val < 100000) {
+                                      // Likely an Excel date serial number
+                                      const excelEpoch = new Date(1899, 11, 30);
+                                      const date = new Date(excelEpoch.getTime() + val * 24 * 60 * 60 * 1000);
+                                      displayValue = date.toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit'
+                                      });
+                                    }
+
+                                    return (
+                                      <td key={colIdx} className="p-2">
+                                        {displayValue}
+                                      </td>
+                                    );
+                                  })}
                                 </tr>
                               ))}
                             </tbody>

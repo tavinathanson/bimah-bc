@@ -190,7 +190,7 @@ export default function DashboardPage() {
       // Check if matches any selected bin
       if (filterBin.length > 0) {
         const bin = getPledgeBin(row.pledgeCurrent);
-        if (filterBin.includes(bin)) {
+        if (bin && filterBin.includes(bin)) {
           pledgeMatches = true;
         }
       }

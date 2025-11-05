@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { parse, differenceInYears, isValid } from "date-fns";
 import type { ColumnMapping, ParsedFile, ParseError, RawRow } from "../schema/types";
 import { RawRowSchema } from "../schema/types";
 
@@ -15,6 +16,13 @@ export function guessColumnMapping(headers: string[]): Partial<ColumnMapping> {
   const ageIndex = normalizedHeaders.findIndex(h => agePatterns.test(h));
   if (ageIndex !== -1) {
     mapping.age = headers[ageIndex];
+  }
+
+  // DOB patterns - look for date of birth, birthday, birthdate, etc.
+  const dobPatterns = /^(dob|date\s*of\s*birth|birth\s*date|birthday|birth\s*day|bdate)$/i;
+  const dobIndex = normalizedHeaders.findIndex(h => dobPatterns.test(h));
+  if (dobIndex !== -1) {
+    mapping.dob = headers[dobIndex];
   }
 
   // Current year pledge patterns - look for current year, "2026", "current", etc.
@@ -90,6 +98,71 @@ function parseAge(value: unknown): number | null {
 
   // Truncate toward zero (e.g., 39.7 → 39, -2.3 → -2)
   return Math.trunc(numeric);
+}
+
+/**
+ * Parse date of birth and calculate age
+ * Accepts various date formats: ISO (YYYY-MM-DD), US (MM/DD/YYYY), Excel serial dates
+ */
+function parseDateOfBirth(value: unknown): number | null {
+  if (!value) return null;
+
+  let date: Date | null = null;
+
+  // Handle Excel serial date numbers
+  if (typeof value === "number") {
+    // Excel dates are days since 1900-01-01 (with leap year bug correction)
+    const excelEpoch = new Date(1899, 11, 30); // Dec 30, 1899
+    date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
+  } else if (typeof value === "string") {
+    const trimmed = value.trim();
+
+    // Try common date formats with date-fns
+    const formats = [
+      'yyyy-MM-dd',     // ISO: 2000-01-31
+      'M/d/yyyy',       // US: 1/31/2000 or 12/31/2000
+      'MM/dd/yyyy',     // US: 01/31/2000
+      'd/M/yyyy',       // International: 31/1/2000
+      'dd/MM/yyyy',     // International: 31/01/2000
+      'yyyy/MM/dd',     // Alternative ISO
+      'M-d-yyyy',       // US with dashes
+      'd-M-yyyy',       // International with dashes
+    ];
+
+    for (const format of formats) {
+      try {
+        const parsed = parse(trimmed, format, new Date());
+        if (isValid(parsed)) {
+          date = parsed;
+          break;
+        }
+      } catch {
+        // Continue to next format
+      }
+    }
+
+    // If no format worked, try native Date parsing as fallback
+    if (!date) {
+      const nativeDate = new Date(trimmed);
+      if (isValid(nativeDate)) {
+        date = nativeDate;
+      }
+    }
+  }
+
+  if (!date || !isValid(date)) {
+    return null;
+  }
+
+  // Calculate age
+  const age = differenceInYears(new Date(), date);
+
+  // Validate age is reasonable (0-120)
+  if (age < 0 || age > 120) {
+    return null;
+  }
+
+  return age;
 }
 
 /**
@@ -220,15 +293,28 @@ export async function parseFile(
     const headerStrings = headers.map((h) => String(h || "").trim());
 
     // Find column indices
-    const ageIndex = headerStrings.indexOf(mapping.age);
+    const ageIndex = mapping.age ? headerStrings.indexOf(mapping.age) : -1;
+    const dobIndex = mapping.dob ? headerStrings.indexOf(mapping.dob) : -1;
     const currentIndex = headerStrings.indexOf(mapping.pledgeCurrent);
     const priorIndex = headerStrings.indexOf(mapping.pledgePrior);
 
-    if (ageIndex === -1) {
+    // Validate that either age or dob is mapped
+    if (ageIndex === -1 && dobIndex === -1) {
+      errors.push({
+        row: 0,
+        message: `Either age or date of birth column must be mapped`,
+      });
+    } else if (mapping.age && ageIndex === -1) {
       errors.push({
         row: 0,
         column: mapping.age,
         message: `Column "${mapping.age}" not found in headers`,
+      });
+    } else if (mapping.dob && dobIndex === -1) {
+      errors.push({
+        row: 0,
+        column: mapping.dob,
+        message: `Column "${mapping.dob}" not found in headers`,
       });
     }
 
@@ -263,23 +349,51 @@ export async function parseFile(
       const dataRow = Array.isArray(rowData) ? rowData : Object.values(rowData);
       const rowNum = i + 1; // 1-indexed for user display
 
-      const ageValue = dataRow[ageIndex];
       const currentValue = dataRow[currentIndex];
       const priorValue = dataRow[priorIndex];
 
-      const age = parseAge(ageValue);
-      const pledgeCurrent = parseNumericValue(currentValue);
-      const pledgePrior = parseNumericValue(priorValue);
+      // Parse age from either age column or DOB column
+      let age: number | null = null;
+      let ageSource: "age" | "dob" = "age";
 
-      // Validate required fields
-      if (age === null) {
+      if (ageIndex !== -1) {
+        const ageValue = dataRow[ageIndex];
+        age = parseAge(ageValue);
+        ageSource = "age";
+
+        // If age parsing failed, provide specific error
+        if (age === null) {
+          errors.push({
+            row: rowNum,
+            column: mapping.age,
+            message: `Invalid or missing age value: "${ageValue}"`,
+          });
+          continue;
+        }
+      } else if (dobIndex !== -1) {
+        const dobValue = dataRow[dobIndex];
+        age = parseDateOfBirth(dobValue);
+        ageSource = "dob";
+
+        // If DOB parsing failed, provide specific error
+        if (age === null) {
+          errors.push({
+            row: rowNum,
+            column: mapping.dob,
+            message: `Invalid or missing date of birth value: "${dobValue}"`,
+          });
+          continue;
+        }
+      } else {
         errors.push({
           row: rowNum,
-          column: mapping.age,
-          message: `Invalid or missing age value: "${ageValue}"`,
+          message: `No age or date of birth data available`,
         });
         continue;
       }
+
+      const pledgeCurrent = parseNumericValue(currentValue);
+      const pledgePrior = parseNumericValue(priorValue);
 
       if (pledgeCurrent === null) {
         errors.push({

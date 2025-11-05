@@ -57,10 +57,16 @@ export type PledgeBinLabel = z.infer<typeof PledgeBinLabel>;
  * Column mapping from user
  */
 export const ColumnMappingSchema = z.object({
-  age: z.string(),
+  age: z.string().optional(),
+  dob: z.string().optional(),
   pledgeCurrent: z.string(),
   pledgePrior: z.string(),
-});
+}).refine(
+  (data) => data.age || data.dob,
+  {
+    message: "Either age or date of birth (dob) must be provided",
+  }
+);
 
 export type ColumnMapping = z.infer<typeof ColumnMappingSchema>;
 
