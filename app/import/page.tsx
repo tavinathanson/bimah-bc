@@ -272,7 +272,7 @@ export default function UploadPage() {
                         </div>
                       </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">
                           Age / Date of Birth
@@ -294,6 +294,23 @@ export default function UploadPage() {
                               handleMappingChange("dob", "");
                             }
                           }}
+                        >
+                          <option value="">Select column...</option>
+                          {currentFile.headers.map((h) => (
+                            <option key={h} value={h}>
+                              {h}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          ZIP Code <span className="text-muted-foreground">(optional)</span>
+                        </label>
+                        <Select
+                          value={currentFile.mapping?.zipCode || ""}
+                          onChange={(e) => handleMappingChange("zipCode", e.target.value)}
                         >
                           <option value="">Select column...</option>
                           {currentFile.headers.map((h) => (

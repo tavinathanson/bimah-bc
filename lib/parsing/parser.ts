@@ -25,6 +25,13 @@ export function guessColumnMapping(headers: string[]): Partial<ColumnMapping> {
     mapping.dob = headers[dobIndex];
   }
 
+  // ZIP code patterns
+  const zipPatterns = /^(zip|zip\s*code|postal|postal\s*code|zipcode)$/i;
+  const zipIndex = normalizedHeaders.findIndex(h => zipPatterns.test(h));
+  if (zipIndex !== -1) {
+    mapping.zipCode = headers[zipIndex];
+  }
+
   // Current year pledge patterns - look for current year, "2026", "current", etc.
   const currentYear = new Date().getFullYear();
   const nextYear = currentYear + 1;
@@ -295,6 +302,7 @@ export async function parseFile(
     // Find column indices
     const ageIndex = mapping.age ? headerStrings.indexOf(mapping.age) : -1;
     const dobIndex = mapping.dob ? headerStrings.indexOf(mapping.dob) : -1;
+    const zipIndex = mapping.zipCode ? headerStrings.indexOf(mapping.zipCode) : -1;
     const currentIndex = headerStrings.indexOf(mapping.pledgeCurrent);
     const priorIndex = headerStrings.indexOf(mapping.pledgePrior);
 
@@ -413,11 +421,21 @@ export async function parseFile(
         continue;
       }
 
+      // Parse ZIP code (optional)
+      let zipCode: string | undefined;
+      if (zipIndex !== -1) {
+        const zipValue = dataRow[zipIndex];
+        if (zipValue !== null && zipValue !== undefined && String(zipValue).trim() !== "") {
+          zipCode = String(zipValue).trim();
+        }
+      }
+
       // Validate with Zod schema
       const parsed = RawRowSchema.safeParse({
         age,
         pledgeCurrent,
         pledgePrior,
+        zipCode,
       });
 
       if (!parsed.success) {

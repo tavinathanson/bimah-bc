@@ -26,6 +26,7 @@ Everything runs client-side using JavaScript in your browser. No server interact
   - Change direction tracking (Increased, Decreased, No Change)
   - Advanced insights (retention rates, concentration analysis, generational giving)
   - Statistical forecasts and projections
+  - **Geographic analysis** (optional): ZIP code mapping and distance-based visualizations
 - **Interactive Visualizations**: Pie charts, bar charts, scatter plots with regression lines using Recharts
 - **Export Capabilities**:
   - Multi-sheet Excel workbook with formatted metrics
@@ -40,6 +41,7 @@ Everything runs client-side using JavaScript in your browser. No server interact
 - **Styling**: Tailwind CSS + shadcn/ui components
 - **Data Processing**: SheetJS (xlsx) for parsing, ExcelJS for export - **all client-side**
 - **Charts**: Recharts
+- **Maps**: Leaflet + react-leaflet for geographic visualizations
 - **Validation**: Zod
 - **Testing**: Vitest + Testing Library
 
@@ -136,9 +138,10 @@ Simply visit https://bethchaim.bimah.org (or your Vercel URL). No login required
 
 Export pledge data from ShulCloud as XLSX or CSV files. Your files should contain at minimum:
 
-- **Age column**: Integer age values (floats will be truncated)
+- **Age column** (or **Date of Birth column**): Integer age values (floats will be truncated) or dates in various formats
 - **Current FY Pledge column**: Numeric pledge amounts for the current fiscal year
 - **Prior FY Pledge column**: Numeric pledge amounts for the prior fiscal year
+- **ZIP Code column** (optional): 5-digit ZIP codes for geographic analysis
 
 Currency symbols, commas, and whitespace are automatically handled during parsing.
 
@@ -146,9 +149,10 @@ Currency symbols, commas, and whitespace are automatically handled during parsin
 
 1. Drag and drop your files or click to browse
 2. For each file, map the required columns:
-   - Age Column
-   - Current FY Pledge
-   - Prior FY Pledge
+   - Age / Date of Birth Column (required)
+   - ZIP Code Column (optional - enables Geography page)
+   - Current FY Pledge (required)
+   - Prior FY Pledge (required)
 3. Preview the first 25 rows to verify parsing
 4. Click "Validate File" to check for errors
 5. Once all files are validated, click "Continue to Dashboard"
@@ -165,6 +169,10 @@ The dashboard displays:
 - **Tables**: Detailed cohort and bin metrics with sortable columns
 - **Insights page**: Advanced metrics including retention rates, pledge concentration, and generational giving
 - **Forecasts page**: Statistical projections with regression analysis and scenario planning
+- **Geography page** (if ZIP codes provided):
+  - Interactive map with ZIP code markers
+  - Distance histogram from synagogue
+  - Sortable ZIP code table with export
 
 ### 5. Export Summary Reports
 
@@ -300,24 +308,68 @@ npm run check
 
 **Before pushing to GitHub**, run `npm run check` to catch TypeScript and linting errors locally.
 
+## Geography Feature
+
+When you include a ZIP Code column in your data, the Geography page becomes available.
+
+### Getting Started
+1. **Import data with ZIP codes**: Ensure your CSV/XLSX includes a ZIP Code column
+2. **Set your location**: Enter your synagogue/organization address on the Geography page
+3. **Analyze**: Interactive map and distance histogram appear automatically
+
+### Interactive Map
+- Visualize household distribution across ZIP codes with circle markers
+- **Circle size** represents household count
+- **Color options**:
+  - **Total Pledge Mode**: Blue scale intensity shows total pledge amount
+  - **% Change Mode**: Green-to-red diverging scale shows year-over-year change
+- Click any circle for detailed ZIP statistics in a popup
+- Your reference location is marked with a standard map pin
+
+### Distance Analysis
+- Histogram showing household distribution by distance from your location
+- Distance bins: 0-2mi, 2-5mi, 5-10mi, 10-20mi, 20+mi
+- Toggle between household count and total pledge metrics
+
+### Privacy & Data
+- **All processing is client-side** - no data uploaded to any server
+- **Geocoding**: Uses free public APIs (OpenStreetMap Nominatim for addresses, zippopotam.us for ZIPs)
+- **Caching**: Addresses and ZIP coordinates cached in localStorage for instant subsequent loads
+- Only addresses and ZIP codes are sent to geocoding APIs - never pledge amounts or personal data
+
+### Try it with Demo Data
+Generate a demo CSV file with ZIP codes included:
+
+```bash
+npm run generate-demo-zip
+```
+
+This creates `demo-pledges-zip.csv` with 500 sample households.
+
 ## Project Structure
 
 ```
 bimah-bc/
 ├── app/                    # Next.js App Router pages
 │   ├── enter/             # Authentication page
-│   ├── upload/            # File upload and mapping
+│   ├── import/            # File upload and mapping
 │   ├── dashboard/         # Main analytics dashboard
 │   ├── insights/          # Advanced metrics
-│   └── forecasts/         # Statistical projections
+│   ├── forecasts/         # Statistical projections
+│   └── geo/               # Geographic analysis (optional)
 ├── components/            # React components
-│   └── ui/               # shadcn/ui components
+│   ├── ui/               # shadcn/ui components
+│   └── geo/              # Geography-specific components
 ├── lib/                  # Core business logic
 │   ├── parsing/          # File parsing (SheetJS - client-side)
 │   ├── math/             # Metrics calculations (client-side)
+│   ├── geo/              # Geocoding & aggregation (client-side)
 │   ├── export/           # Excel export (ExcelJS - client-side)
 │   └── schema/           # Zod schemas and types
 ├── tests/                # Test files
+│   └── geo/             # Geography feature tests
+├── public/               # Static assets
+│   └── leaflet/         # Map marker icons
 └── middleware.ts         # Authentication middleware
 ```
 

@@ -7,6 +7,7 @@ export const RawRowSchema = z.object({
   age: z.number().int().nonnegative(),
   pledgeCurrent: z.number().nonnegative(),
   pledgePrior: z.number().nonnegative(),
+  zipCode: z.string().optional(),
 });
 
 export type RawRow = z.infer<typeof RawRowSchema>;
@@ -61,6 +62,7 @@ export const ColumnMappingSchema = z.object({
   dob: z.string().optional(),
   pledgeCurrent: z.string(),
   pledgePrior: z.string(),
+  zipCode: z.string().optional(),
 }).refine(
   (data) => data.age || data.dob,
   {

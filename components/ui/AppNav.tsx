@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { BimahLogoWithText } from "@/components/ui/BimahLogoWithText";
-import { BarChart3, Lightbulb, TrendingUp, Upload, Download } from "lucide-react";
+import { BarChart3, Lightbulb, TrendingUp, Upload, Download, MapPin } from "lucide-react";
 
 interface AppNavProps {
   onExport?: () => void;
@@ -34,11 +34,13 @@ export function AppNav({ onExport, showExport = false }: AppNavProps) {
             {pathname === "/dashboard" && "Pledge Analytics"}
             {pathname === "/insights" && "Advanced Insights"}
             {pathname === "/forecasts" && "Forecasts"}
+            {pathname === "/geo" && "Geography"}
           </h1>
           <p className="text-muted-foreground text-xs md:text-sm mt-0.5 truncate">
             {pathname === "/dashboard" && "FY26 (July 2025 - June 2026)"}
             {pathname === "/insights" && "Deep dive analytics and trends"}
             {pathname === "/forecasts" && "Projections and scenarios"}
+            {pathname === "/geo" && "ZIP code analysis and mapping"}
           </p>
         </div>
       </div>
@@ -70,6 +72,15 @@ export function AppNav({ onExport, showExport = false }: AppNavProps) {
         >
           <TrendingUp className="h-4 w-4 md:mr-2" />
           <span className="hidden md:inline">Forecasts</span>
+        </Button>
+
+        <Button
+          variant={isActive("/geo") ? "default" : "outline"}
+          onClick={() => router.push("/geo")}
+          className="whitespace-nowrap"
+        >
+          <MapPin className="h-4 w-4 md:mr-2" />
+          <span className="hidden md:inline">Geography</span>
         </Button>
 
         {/* Divider */}

@@ -82,6 +82,23 @@ function generatePledge(age: number): number {
   return Math.round(basePledge / 50) * 50;
 }
 
+function generateZipCode(): string {
+  // Central NJ ZIP codes with realistic distribution
+  const zipCodes = [
+    "08550", "08550", "08550", "08550", "08550", // West Windsor (25%)
+    "08540", "08540", "08540", "08540", // Princeton (20%)
+    "08536", "08536", "08536", // Plainsboro (15%)
+    "08520", "08520", // East Windsor (10%)
+    "08691", "08691", // Robbinsville (10%)
+    "08512", // Cranbury (5%)
+    "08831", // Monroe Township (5%)
+    "08648", // Lawrence Township (5%)
+    "08618", // Trenton (5%)
+  ];
+
+  return randomChoice(zipCodes);
+}
+
 /**
  * Generate demo pledge data
  * @param numRows Number of household rows to generate (default: 500)
@@ -135,6 +152,7 @@ export function generateDemoData(numRows = 500): RawRow[] {
       age,
       pledgeCurrent,
       pledgePrior,
+      zipCode: generateZipCode(),
     });
   }
 
