@@ -581,13 +581,21 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <Card className={hasActiveFilters ? "ring-2 ring-blue-400" : ""}>
-            <CardHeader className="py-4 md:py-6">
-              <div className="flex items-center gap-2 mb-2">
-                <CardDescription className="text-xs md:text-sm">Total Households</CardDescription>
-                {hasActiveFilters && <span className="text-blue-600 text-sm">●</span>}
+        {hasActiveFilters && (
+          <div className="bg-blue-50/80 backdrop-blur-sm border border-blue-200 rounded-lg p-2 md:p-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-blue-600 flex-shrink-0" />
+              <div className="text-xs md:text-sm text-blue-900">
+                <strong>Filtered View:</strong> Showing {totals.totalHouseholds} of {data.length} households. All metrics and charts below reflect the active filters.
               </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <Card className={hasActiveFilters ? "border-l-4 border-l-blue-400" : ""}>
+            <CardHeader className="py-4 md:py-6">
+              <CardDescription className="text-xs md:text-sm mb-2">Total Households</CardDescription>
               <CardTitle className="text-2xl md:text-3xl">
                 {totals.totalHouseholds}
                 {hasActiveFilters && (
@@ -596,11 +604,6 @@ export default function DashboardPage() {
                   </span>
                 )}
               </CardTitle>
-              {hasActiveFilters && (
-                <CardDescription className="text-xs text-blue-700 font-medium mt-2">
-                  Filtered view
-                </CardDescription>
-              )}
             </CardHeader>
           </Card>
 
