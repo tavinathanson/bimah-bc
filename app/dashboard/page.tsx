@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,6 +79,7 @@ export default function DashboardPage() {
   const [ageDropdownOpen, setAgeDropdownOpen] = useState(false);
   const [changeDropdownOpen, setChangeDropdownOpen] = useState(false);
   const [pledgeDropdownOpen, setPledgeDropdownOpen] = useState(false);
+  const [distanceDropdownOpen, setDistanceDropdownOpen] = useState(false);
 
   // Pledge mode
   const [pledgeMode, setPledgeMode] = useState<"bins" | "custom">("bins");
@@ -98,7 +99,7 @@ export default function DashboardPage() {
   const [isGeocoding, setIsGeocoding] = useState(false);
 
   // Geographic filters (only active when location is set)
-  const [filterDistance, setFilterDistance] = useState<string>("all");
+  const [filterDistance, setFilterDistance] = useState<string[]>([]);
 
   // Enable geo by default when ZIP data is detected
   useEffect(() => {
@@ -226,6 +227,52 @@ export default function DashboardPage() {
     };
   }, [geoEnabled, synagogueCoords?.lat, synagogueCoords?.lon, hasZips, data.length]);
 
+  // Calculate dynamic distance ranges based on actual data distribution
+  // Must be before early returns to maintain hook order
+  const distanceRanges = React.useMemo(() => {
+    if (geoAggregates.length === 0) return [];
+
+    const distances = geoAggregates
+      .filter(agg => agg.distanceMiles !== undefined)
+      .map(agg => agg.distanceMiles!)
+      .sort((a, b) => a - b);
+
+    if (distances.length === 0) return [];
+
+    const max = Math.max(...distances);
+
+    // Create 4 ranges based on data distribution
+    const ranges: { value: string; label: string; min: number; max: number }[] = [];
+
+    if (max <= 10) {
+      // Very local congregation - use small increments
+      ranges.push(
+        { value: "0-2", label: "0-2 mi", min: 0, max: 2 },
+        { value: "2-5", label: "2-5 mi", min: 2, max: 5 },
+        { value: "5-10", label: "5-10 mi", min: 5, max: 10 },
+        { value: "10+", label: "10+ mi", min: 10, max: Infinity }
+      );
+    } else if (max <= 50) {
+      // Regional congregation
+      ranges.push(
+        { value: "0-5", label: "0-5 mi", min: 0, max: 5 },
+        { value: "5-15", label: "5-15 mi", min: 5, max: 15 },
+        { value: "15-30", label: "15-30 mi", min: 15, max: 30 },
+        { value: "30+", label: "30+ mi", min: 30, max: Infinity }
+      );
+    } else {
+      // Wide geographic spread
+      ranges.push(
+        { value: "0-10", label: "0-10 mi", min: 0, max: 10 },
+        { value: "10-30", label: "10-30 mi", min: 10, max: 30 },
+        { value: "30-100", label: "30-100 mi", min: 30, max: 100 },
+        { value: "100+", label: "100+ mi", min: 100, max: Infinity }
+      );
+    }
+
+    return ranges;
+  }, [geoAggregates]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -319,7 +366,7 @@ export default function DashboardPage() {
     }
 
     // Distance filter (only applies when geo is enabled and location is set)
-    if (geoEnabled && synagogueCoords && filterDistance !== "all" && row.zipCode) {
+    if (geoEnabled && synagogueCoords && filterDistance.length > 0 && row.zipCode) {
       // Find this ZIP's distance in geoAggregates
       const geoAgg = geoAggregates.find(g => g.zip === row.zipCode);
       if (!geoAgg || geoAgg.distanceMiles === undefined) {
@@ -327,10 +374,18 @@ export default function DashboardPage() {
       }
 
       const distance = geoAgg.distanceMiles;
-      if (filterDistance === "0-5" && (distance < 0 || distance >= 5)) return false;
-      if (filterDistance === "5-10" && (distance < 5 || distance >= 10)) return false;
-      if (filterDistance === "10-20" && (distance < 10 || distance >= 20)) return false;
-      if (filterDistance === "20+" && distance < 20) return false;
+      let distanceMatches = false;
+
+      // Check if distance falls within any selected range
+      for (const selectedRange of filterDistance) {
+        const range = distanceRanges.find(r => r.value === selectedRange);
+        if (range && distance >= range.min && distance < range.max) {
+          distanceMatches = true;
+          break;
+        }
+      }
+
+      if (!distanceMatches) return false;
     }
 
     return true;
@@ -338,7 +393,7 @@ export default function DashboardPage() {
 
   const hasActiveFilters = filterCohort.length > 0 || filterStatus.length > 0 ||
     filterChange.length > 0 || filterBin.length > 0 || pledgeMode === "custom" ||
-    ageCustomEnabled || (geoEnabled && filterDistance !== "all");
+    ageCustomEnabled || filterDistance.length > 0;
 
   const clearFilters = () => {
     setFilterCohort([]);
@@ -351,7 +406,7 @@ export default function DashboardPage() {
     setMaxAge("");
     setPledgeMode("bins");
     setAgeCustomEnabled(false);
-    setFilterDistance("all");
+    setFilterDistance([]);
   };
 
   // Filter geo aggregates based on filteredData
@@ -645,12 +700,12 @@ export default function DashboardPage() {
       summaries.push(`Change: ${labels.join(", ")}`);
     }
 
-    if (geoEnabled && filterDistance !== "all") {
-      const distanceLabel = filterDistance === "0-5" ? "0-5 mi" :
-                           filterDistance === "5-10" ? "5-10 mi" :
-                           filterDistance === "10-20" ? "10-20 mi" :
-                           "20+ mi";
-      summaries.push(`Distance: ${distanceLabel}`);
+    if (filterDistance.length > 0) {
+      const labels = filterDistance.map(d => {
+        const range = distanceRanges.find(r => r.value === d);
+        return range ? range.label : d;
+      });
+      summaries.push(`Distance: ${labels.join(", ")}`);
     }
 
     return summaries;
@@ -1105,39 +1160,53 @@ export default function DashboardPage() {
                 {geoEnabled && synagogueCoords && (
                   <div className="relative">
                     <div className="flex items-center gap-2 mb-1.5 h-7">
-                      <label className={`text-xs font-medium ${filterDistance !== "all" ? "text-purple-700 font-semibold" : "text-muted-foreground"}`}>
+                      <label className={`text-xs font-medium ${filterDistance.length > 0 ? "text-purple-700 font-semibold" : "text-muted-foreground"}`}>
                         Distance
                       </label>
-                      {filterDistance !== "all" && <span className="text-purple-600 text-sm">●</span>}
+                      {filterDistance.length > 0 && <span className="text-purple-600 text-sm">●</span>}
                     </div>
                     <button
-                      onClick={() => {
-                        const select = document.getElementById("distance-select") as HTMLSelectElement;
-                        select?.focus();
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${filterDistance !== "all" ? "ring-2 ring-purple-400 border-purple-400" : ""}`}
+                      onClick={() => setDistanceDropdownOpen(!distanceDropdownOpen)}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${filterDistance.length > 0 ? "ring-2 ring-purple-400 border-purple-400" : ""}`}
                     >
-                      <span className={filterDistance === "all" ? "text-muted-foreground" : ""}>
-                        {filterDistance === "all" ? "All Distances" :
-                         filterDistance === "0-5" ? "0-5 miles" :
-                         filterDistance === "5-10" ? "5-10 miles" :
-                         filterDistance === "10-20" ? "10-20 miles" :
-                         "20+ miles"}
+                      <span className={filterDistance.length === 0 ? "text-muted-foreground" : ""}>
+                        {filterDistance.length === 0 ? "All Distances" : `${filterDistance.length} selected`}
                       </span>
                       <ChevronDown className="h-4 w-4" />
                     </button>
-                    <select
-                      id="distance-select"
-                      value={filterDistance}
-                      onChange={(e) => setFilterDistance(e.target.value)}
-                      className="absolute inset-0 w-full opacity-0 cursor-pointer"
-                    >
-                      <option value="all">All Distances</option>
-                      <option value="0-5">0-5 miles</option>
-                      <option value="5-10">5-10 miles</option>
-                      <option value="10-20">10-20 miles</option>
-                      <option value="20+">20+ miles</option>
-                    </select>
+                    {distanceDropdownOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setDistanceDropdownOpen(false)} />
+                        <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg">
+                          {filterDistance.length > 0 && (
+                            <button
+                              onClick={() => setFilterDistance([])}
+                              className="w-full px-3 py-2 text-sm text-left text-purple-600 hover:bg-purple-50 border-b font-medium"
+                            >
+                              Clear (show all)
+                            </button>
+                          )}
+                          {distanceRanges.map(option => (
+                            <label key={option.value} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={filterDistance.includes(option.value)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setFilterDistance([...filterDistance, option.value]);
+                                  } else {
+                                    setFilterDistance(filterDistance.filter(d => d !== option.value));
+                                  }
+                                }}
+                                className="rounded"
+                              />
+                              <span className="text-sm">{option.label}</span>
+                              {filterDistance.includes(option.value) && <Check className="h-4 w-4 ml-auto text-purple-600" />}
+                            </label>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -1598,7 +1667,7 @@ export default function DashboardPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
                 ) : filteredGeoAggregates.length > 0 ? (
-                  <DistanceHistogram aggregates={filteredGeoAggregates} locationName={synagogueAddress || ""} />
+                  <DistanceHistogram aggregates={filteredGeoAggregates} distanceBins={distanceRanges} locationName={synagogueAddress || ""} />
                 ) : (
                   <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
                     <p className="text-sm text-muted-foreground">No ZIP codes match current filters</p>

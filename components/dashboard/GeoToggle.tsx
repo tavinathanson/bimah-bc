@@ -54,6 +54,7 @@ export function GeoToggle({ onAddressChange }: GeoToggleProps) {
     localStorage.removeItem(STORAGE_KEY_ADDRESS);
     localStorage.removeItem(STORAGE_KEY_COORDS);
     onAddressChange(null, null);
+    setIsOpen(false);
   };
 
   return (

@@ -55,39 +55,48 @@ function getColorForDeltaPercent(deltaPercent: number | "n/a"): string {
 }
 
 /**
- * Map bounds component to fit markers, excluding outliers
+ * Map view adjuster - centers on synagogue, adjusts zoom to show congregants
  */
-function MapBounds({ aggregates, synagogueCoords }: { aggregates: ZipAggregate[]; synagogueCoords: Coordinates }) {
+function MapViewAdjuster({ aggregates, synagogueCoords }: { aggregates: ZipAggregate[]; synagogueCoords: Coordinates }) {
   const map = useMap();
 
   useEffect(() => {
+    const L = require("leaflet");
+
+    // Always center on synagogue
+    map.setView([synagogueCoords.lat, synagogueCoords.lon], map.getZoom());
+
     const withCoords = aggregates.filter((agg) => agg.coords && agg.distanceMiles !== undefined);
     if (withCoords.length === 0) return;
 
-    const L = require("leaflet");
-
-    // Filter out outliers: exclude ZIPs beyond 95th percentile distance
+    // Calculate appropriate zoom based on max distance (95th percentile)
     const distances = withCoords.map(agg => agg.distanceMiles!).sort((a, b) => a - b);
     const p95Index = Math.floor(distances.length * 0.95);
     const maxDistance = distances[p95Index] || distances[distances.length - 1];
 
-    // Only include ZIPs within the 95th percentile distance
-    const nonOutliers = withCoords.filter(agg => agg.distanceMiles! <= maxDistance);
+    // Determine zoom level based on distance
+    // These are approximate - Leaflet zoom levels are exponential
+    let zoom: number;
+    if (maxDistance <= 5) {
+      zoom = 11; // Very local
+    } else if (maxDistance <= 15) {
+      zoom = 10; // Local/suburban
+    } else if (maxDistance <= 30) {
+      zoom = 9; // Regional
+    } else if (maxDistance <= 75) {
+      zoom = 8; // Multi-city
+    } else if (maxDistance <= 150) {
+      zoom = 7; // Multi-state (close)
+    } else if (maxDistance <= 300) {
+      zoom = 6; // Multi-state (wide)
+    } else if (maxDistance <= 600) {
+      zoom = 5; // Cross-country
+    } else {
+      zoom = 4; // Continental/international
+    }
 
-    // If we filtered out too many (>20%), include more
-    const includeZips = nonOutliers.length < withCoords.length * 0.8
-      ? withCoords
-      : nonOutliers;
-
-    const bounds = L.latLngBounds(
-      includeZips.map((agg) => [agg.coords!.lat, agg.coords!.lon])
-    );
-
-    // Always include synagogue in bounds
-    bounds.extend([synagogueCoords.lat, synagogueCoords.lon]);
-
-    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
-  }, [map, aggregates, synagogueCoords]);
+    map.setZoom(zoom);
+  }, [map, aggregates, synagogueCoords.lat, synagogueCoords.lon]);
 
   return null;
 }
@@ -154,6 +163,7 @@ export function ZipMap({ aggregates, synagogueCoords, synagogueAddress }: ZipMap
       {/* Map */}
       <div className="w-full h-[300px] rounded-lg overflow-hidden border">
         <MapContainer
+          key={`${synagogueCoords.lat}-${synagogueCoords.lon}`}
           center={[synagogueCoords.lat, synagogueCoords.lon]}
           zoom={10}
           minZoom={7}
@@ -164,7 +174,7 @@ export function ZipMap({ aggregates, synagogueCoords, synagogueAddress }: ZipMap
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          <MapBounds aggregates={withCoords} synagogueCoords={synagogueCoords} />
+          <MapViewAdjuster aggregates={withCoords} synagogueCoords={synagogueCoords} />
 
           {/* Synagogue marker */}
           <Marker position={[synagogueCoords.lat, synagogueCoords.lon]}>

@@ -87,14 +87,6 @@ export interface DistanceBin {
   max: number;
 }
 
-export const DISTANCE_BINS: DistanceBin[] = [
-  { label: "0-2 mi", min: 0, max: 2 },
-  { label: "2-5 mi", min: 2, max: 5 },
-  { label: "5-10 mi", min: 5, max: 10 },
-  { label: "10-20 mi", min: 10, max: 20 },
-  { label: "20+ mi", min: 20, max: Infinity },
-];
-
 /**
  * Histogram data for distance analysis
  */
@@ -105,13 +97,14 @@ export interface DistanceHistogramBin {
 }
 
 /**
- * Calculate distance histogram
+ * Calculate distance histogram using provided bins
  */
 export function calculateDistanceHistogram(
   aggregates: ZipAggregate[],
+  distanceBins: DistanceBin[],
   metric: "households" | "totalPledge" = "households"
 ): DistanceHistogramBin[] {
-  const bins: DistanceHistogramBin[] = DISTANCE_BINS.map((bin) => ({
+  const bins: DistanceHistogramBin[] = distanceBins.map((bin) => ({
     label: bin.label,
     households: 0,
     totalPledge: 0,
@@ -120,7 +113,7 @@ export function calculateDistanceHistogram(
   for (const agg of aggregates) {
     if (agg.distanceMiles === undefined) continue;
 
-    const binIndex = DISTANCE_BINS.findIndex(
+    const binIndex = distanceBins.findIndex(
       (bin) => agg.distanceMiles! >= bin.min && agg.distanceMiles! < bin.max
     );
 

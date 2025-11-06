@@ -2,6 +2,10 @@
 
 **Bimah** is a Next.js application designed to analyze synagogue pledge data from ShulCloud exports. It provides comprehensive analytics, interactive visualizations, and detailed Excel reports for tracking pledge commitments across fiscal years.
 
+## 🎯 Design Philosophy: Extensibility First
+
+This application is designed to work for **any synagogue or religious organization**, not just one specific congregation. We avoid hardcoding values and instead calculate bins, ranges, and thresholds dynamically from your data. See [`.claude/design-principles.md`](./.claude/design-principles.md) for detailed design guidelines.
+
 ## 🔒 Privacy First
 
 **All data processing happens entirely in your browser.** Your pledge data:
@@ -346,7 +350,19 @@ Generate a demo CSV file with ZIP codes included:
 npm run generate-demo-zip
 ```
 
-This creates `demo-pledges-zip.csv` with 500 sample households.
+This creates `demo-pledges-zip.csv` with 500 sample households in a local area (New Jersey).
+
+For testing with a wider geographic spread (spanning multiple states from NYC to California):
+
+```bash
+npm run generate-demo-wide
+```
+
+This creates `demo-pledges-wide.csv` with 500 sample households distributed across:
+- 40% Local (NYC/NJ metro, 0-50 miles)
+- 30% Regional (Philadelphia, Baltimore, Boston area, 100-200 miles)
+- 20% Distant (DC, Pittsburgh, Buffalo, Vermont, 200-500 miles)
+- 10% Very distant (Florida, Chicago, California, 500+ miles)
 
 ## Project Structure
 

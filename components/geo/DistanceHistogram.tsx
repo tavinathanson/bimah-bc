@@ -2,20 +2,21 @@
 
 import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import type { ZipAggregate } from "@/lib/geo/aggregation";
+import type { ZipAggregate, DistanceBin } from "@/lib/geo/aggregation";
 import { calculateDistanceHistogram } from "@/lib/geo/aggregation";
 import { Button } from "@/components/ui/button";
 import numeral from "numeral";
 
 interface DistanceHistogramProps {
   aggregates: ZipAggregate[];
+  distanceBins: DistanceBin[];
   locationName?: string;
 }
 
-export function DistanceHistogram({ aggregates, locationName }: DistanceHistogramProps) {
+export function DistanceHistogram({ aggregates, distanceBins, locationName }: DistanceHistogramProps) {
   const [metric, setMetric] = useState<"households" | "totalPledge">("households");
 
-  const histogramData = calculateDistanceHistogram(aggregates, metric);
+  const histogramData = calculateDistanceHistogram(aggregates, distanceBins, metric);
 
   const data = histogramData.map((bin) => ({
     name: bin.label,
@@ -53,17 +54,21 @@ export function DistanceHistogram({ aggregates, locationName }: DistanceHistogra
             }
           />
           <Tooltip
-            formatter={(value: number) =>
-              metric === "households"
-                ? `${value} Households`
-                : numeral(value).format("$0,0")
-            }
-            labelStyle={{ color: "#000" }}
-            contentStyle={{
-              backgroundColor: "white",
-              border: "1px solid #e5e7eb",
-              borderRadius: "0.5rem",
-              boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+            content={({ active, payload, label }) => {
+              if (!active || !payload || !payload.length) return null;
+
+              const value = payload[0].value as number;
+
+              return (
+                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                  <p className="font-semibold text-sm mb-1">{label}</p>
+                  <p className="text-sm" style={{ color: payload[0].color }}>
+                    {metric === "households"
+                      ? `${value} Households`
+                      : numeral(value).format("$0,0")}
+                  </p>
+                </div>
+              );
             }}
           />
           <Bar dataKey="value" fill="#3b82f6" />
