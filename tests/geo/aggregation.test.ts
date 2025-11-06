@@ -1,12 +1,21 @@
 import { describe, it, expect } from "vitest";
 import type { PledgeRow } from "@/lib/schema/types";
+import type { DistanceBin } from "@/lib/geo/aggregation";
 import {
   hasZipCodeData,
   aggregateByZipCode,
   calculateDistanceHistogram,
   sortZipAggregates,
-  DISTANCE_BINS,
 } from "@/lib/geo/aggregation";
+
+// Test distance bins
+const TEST_DISTANCE_BINS: DistanceBin[] = [
+  { label: "0-2 mi", min: 0, max: 2 },
+  { label: "2-5 mi", min: 2, max: 5 },
+  { label: "5-10 mi", min: 5, max: 10 },
+  { label: "10-20 mi", min: 10, max: 20 },
+  { label: "20+ mi", min: 20, max: Infinity },
+];
 
 const mockPledgeRows: PledgeRow[] = [
   {
@@ -165,10 +174,10 @@ describe("geo aggregation", () => {
         },
       ];
 
-      const histogram = calculateDistanceHistogram(aggregates, "households");
+      const histogram = calculateDistanceHistogram(aggregates, TEST_DISTANCE_BINS, "households");
 
       // Check that bins are created correctly
-      expect(histogram).toHaveLength(DISTANCE_BINS.length);
+      expect(histogram).toHaveLength(TEST_DISTANCE_BINS.length);
 
       // 0-2 mi should have 10 households
       expect(histogram[0]?.households).toBe(10);
@@ -194,7 +203,7 @@ describe("geo aggregation", () => {
         },
       ];
 
-      const histogram = calculateDistanceHistogram(aggregates, "totalPledge");
+      const histogram = calculateDistanceHistogram(aggregates, TEST_DISTANCE_BINS, "totalPledge");
 
       expect(histogram[0]?.totalPledge).toBe(10000);
     });
