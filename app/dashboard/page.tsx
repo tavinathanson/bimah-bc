@@ -166,6 +166,10 @@ export default function DashboardPage() {
   // Geocode ZIPs when synagogue coords change
   useEffect(() => {
     if (!geoEnabled || !hasZips || !synagogueCoords || data.length === 0) {
+      // Don't clear aggregates when just disabling - keep the cached data
+      if (!geoEnabled) {
+        return;
+      }
       setGeoAggregates([]);
       return;
     }
