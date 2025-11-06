@@ -434,6 +434,8 @@ export default function DashboardPage() {
   const showChangeChart = (filterChange.length === 0 || filterChange.length >= 2) &&
     (filterStatus.length === 0 || filterStatus.includes("renewed") || filterStatus.length >= 2);
 
+  const showDistanceHistogram = filterDistance.length === 0 || filterDistance.length >= 2;
+
   const totals = calculateTotals(filteredData);
   const cohortMetrics = calculateCohortMetrics(filteredData);
   const binMetrics = calculateBinMetrics(filteredData);
@@ -1640,7 +1642,7 @@ export default function DashboardPage() {
           )}
 
           {/* Distance Histogram Card */}
-          {geoEnabled && (
+          {geoEnabled && showDistanceHistogram && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl flex items-center gap-2">
@@ -1667,7 +1669,26 @@ export default function DashboardPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
                 ) : filteredGeoAggregates.length > 0 ? (
-                  <DistanceHistogram aggregates={filteredGeoAggregates} distanceBins={distanceRanges} locationName={synagogueAddress || ""} />
+                  <DistanceHistogram
+                    aggregates={filteredGeoAggregates}
+                    distanceBins={distanceRanges}
+                    locationName={synagogueAddress || ""}
+                    selectedBins={
+                      filterDistance.length > 0
+                        ? filterDistance.map(value => {
+                            const range = distanceRanges.find(r => r.value === value);
+                            return range?.label || value;
+                          })
+                        : undefined
+                    }
+                    onBinClick={(binLabel) => {
+                      // Find the range with matching label and use its value
+                      const matchingRange = distanceRanges.find(r => r.label === binLabel);
+                      if (matchingRange) {
+                        setFilterDistance([matchingRange.value]);
+                      }
+                    }}
+                  />
                 ) : (
                   <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
                     <p className="text-sm text-muted-foreground">No ZIP codes match current filters</p>

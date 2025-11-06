@@ -11,16 +11,24 @@ interface DistanceHistogramProps {
   aggregates: ZipAggregate[];
   distanceBins: DistanceBin[];
   locationName?: string;
+  onBinClick?: (binValue: string) => void;
+  selectedBins?: string[]; // Array of selected bin labels to filter display
 }
 
-export function DistanceHistogram({ aggregates, distanceBins, locationName }: DistanceHistogramProps) {
+export function DistanceHistogram({ aggregates, distanceBins, locationName, onBinClick, selectedBins }: DistanceHistogramProps) {
   const [metric, setMetric] = useState<"households" | "totalPledge">("households");
 
   const histogramData = calculateDistanceHistogram(aggregates, distanceBins, metric);
 
-  const data = histogramData.map((bin) => ({
+  // Filter data to only show selected bins if any are selected
+  const filteredHistogramData = selectedBins && selectedBins.length > 0
+    ? histogramData.filter(bin => selectedBins.includes(bin.label))
+    : histogramData;
+
+  const data = filteredHistogramData.map((bin, index) => ({
     name: bin.label,
     value: metric === "households" ? bin.households : bin.totalPledge,
+    binValue: distanceBins[index]?.label || bin.label,
   }));
 
   return (
@@ -71,7 +79,21 @@ export function DistanceHistogram({ aggregates, distanceBins, locationName }: Di
               );
             }}
           />
-          <Bar dataKey="value" fill="#3b82f6" />
+          <Bar
+            dataKey="value"
+            fill="#3b82f6"
+            onClick={(data) => {
+              if (onBinClick) {
+                // Find the matching bin value from distanceBins
+                const binLabel = data.name;
+                const matchingBin = distanceBins.find(bin => bin.label === binLabel);
+                if (matchingBin) {
+                  onBinClick(matchingBin.label);
+                }
+              }
+            }}
+            cursor={onBinClick ? "pointer" : "default"}
+          />
         </BarChart>
       </ResponsiveContainer>
 
