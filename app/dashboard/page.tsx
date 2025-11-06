@@ -645,6 +645,14 @@ export default function DashboardPage() {
       summaries.push(`Change: ${labels.join(", ")}`);
     }
 
+    if (geoEnabled && filterDistance !== "all") {
+      const distanceLabel = filterDistance === "0-5" ? "0-5 mi" :
+                           filterDistance === "5-10" ? "5-10 mi" :
+                           filterDistance === "10-20" ? "10-20 mi" :
+                           "20+ mi";
+      summaries.push(`Distance: ${distanceLabel}`);
+    }
+
     return summaries;
   };
 
