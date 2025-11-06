@@ -1255,15 +1255,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <div className="bg-white/60 backdrop-blur-sm border border-[#bae0ff] rounded-lg p-3 md:p-4">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-[#1886d9] flex-shrink-0" />
-            <div className="text-xs md:text-sm text-[#0e2546]">
-              <strong>Note:</strong> Time-based pledge progress requires gift dates; this version computes a snapshot from the imported files.
-            </div>
-          </div>
-        </div>
-
         {hasActiveFilters && (
           <div className="bg-blue-50/80 backdrop-blur-sm border border-blue-200 rounded-lg p-2 md:p-3">
             <div className="flex items-center gap-2">
