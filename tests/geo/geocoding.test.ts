@@ -3,8 +3,7 @@ import {
   isValidZipCode,
   normalizeZipCode,
   calculateDistance,
-  calculateDistanceFromSynagogue,
-  SYNAGOGUE_COORDS,
+  calculateDistanceFromPoint,
 } from "@/lib/geo/geocoding";
 
 describe("geocoding utilities", () => {
@@ -43,15 +42,15 @@ describe("geocoding utilities", () => {
 
   describe("calculateDistance", () => {
     it("should calculate distance between two coordinates", () => {
-      // Danville, CA to San Francisco, CA (approximately 35 miles)
+      // Danville, CA to San Francisco, CA (approximately 24 miles)
       const danville = { lat: 37.8111, lon: -121.9841 };
       const sanFrancisco = { lat: 37.7749, lon: -122.4194 };
 
       const distance = calculateDistance(danville, sanFrancisco);
 
       // Allow for some tolerance due to haversine approximation
-      expect(distance).toBeGreaterThan(30);
-      expect(distance).toBeLessThan(40);
+      expect(distance).toBeGreaterThan(20);
+      expect(distance).toBeLessThan(30);
     });
 
     it("should return 0 for identical coordinates", () => {
@@ -73,20 +72,23 @@ describe("geocoding utilities", () => {
     });
   });
 
-  describe("calculateDistanceFromSynagogue", () => {
-    it("should calculate distance from synagogue", () => {
+  describe("calculateDistanceFromPoint", () => {
+    it("should calculate distance from a given point", () => {
+      // Reference point: Danville, CA
+      const danville = { lat: 37.8111, lon: -121.9841 };
       // San Ramon, CA (neighboring city)
       const sanRamon = { lat: 37.7799, lon: -121.9780 };
 
-      const distance = calculateDistanceFromSynagogue(sanRamon);
+      const distance = calculateDistanceFromPoint(danville, sanRamon);
 
       // Should be roughly 2-3 miles
       expect(distance).toBeGreaterThan(1);
       expect(distance).toBeLessThan(5);
     });
 
-    it("should return 0 for synagogue coordinates", () => {
-      const distance = calculateDistanceFromSynagogue(SYNAGOGUE_COORDS);
+    it("should return 0 for identical coordinates", () => {
+      const coord = { lat: 37.8111, lon: -121.9841 };
+      const distance = calculateDistanceFromPoint(coord, coord);
 
       expect(distance).toBeCloseTo(0, 1);
     });

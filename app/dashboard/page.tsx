@@ -685,7 +685,7 @@ export default function DashboardPage() {
 
               {/* Geographic Location Setting - Compact */}
               <div className="border-t pt-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-h-[32px]">
                   <label className="text-xs text-muted-foreground">Geographic:</label>
                   <button
                     onClick={() => {
@@ -1517,7 +1517,7 @@ export default function DashboardPage() {
           )}
 
           {/* Geographic Map Card */}
-          {geoEnabled && synagogueCoords && filteredGeoAggregates.length > 0 && (
+          {geoEnabled && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl flex items-center gap-2">
@@ -1525,27 +1525,41 @@ export default function DashboardPage() {
                   Geographic Distribution
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {filteredData.length} Households • {synagogueAddress}
+                  {synagogueCoords ? `${filteredData.length} Households • ${synagogueAddress}` : "Set your location to view"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {isGeocoding ? (
+                {!synagogueCoords ? (
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-purple-300">
+                    <div className="text-center px-4">
+                      <MapPin className="h-12 w-12 text-purple-400 mx-auto mb-3" />
+                      <p className="text-sm font-medium text-purple-900 mb-1">Set Your Location</p>
+                      <p className="text-xs text-muted-foreground">
+                        Click "Set Location" above to enable the map
+                      </p>
+                    </div>
+                  </div>
+                ) : isGeocoding ? (
                   <div className="h-[300px] flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
-                ) : (
+                ) : filteredGeoAggregates.length > 0 ? (
                   <ZipMap
                     aggregates={filteredGeoAggregates}
                     synagogueCoords={synagogueCoords}
                     synagogueAddress={synagogueAddress || undefined}
                   />
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground">No ZIP codes match current filters</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
           )}
 
           {/* Distance Histogram Card */}
-          {geoEnabled && synagogueCoords && filteredGeoAggregates.length > 0 && (
+          {geoEnabled && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl flex items-center gap-2">
@@ -1553,16 +1567,30 @@ export default function DashboardPage() {
                   Distance Distribution
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {filteredData.length} Households
+                  {synagogueCoords ? `${filteredData.length} Households` : "Set your location to view"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {isGeocoding ? (
+                {!synagogueCoords ? (
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-purple-300">
+                    <div className="text-center px-4">
+                      <MapPin className="h-12 w-12 text-purple-400 mx-auto mb-3" />
+                      <p className="text-sm font-medium text-purple-900 mb-1">Set Your Location</p>
+                      <p className="text-xs text-muted-foreground">
+                        Click "Set Location" above to see distance analysis
+                      </p>
+                    </div>
+                  </div>
+                ) : isGeocoding ? (
                   <div className="h-[300px] flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
-                ) : (
+                ) : filteredGeoAggregates.length > 0 ? (
                   <DistanceHistogram aggregates={filteredGeoAggregates} locationName={synagogueAddress || ""} />
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground">No ZIP codes match current filters</p>
+                  </div>
                 )}
               </CardContent>
             </Card>

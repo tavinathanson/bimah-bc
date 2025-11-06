@@ -55,25 +55,39 @@ function getColorForDeltaPercent(deltaPercent: number | "n/a"): string {
 }
 
 /**
- * Map bounds component to fit all markers
+ * Map bounds component to fit markers, excluding outliers
  */
-function MapBounds({ aggregates }: { aggregates: ZipAggregate[] }) {
+function MapBounds({ aggregates, synagogueCoords }: { aggregates: ZipAggregate[]; synagogueCoords: Coordinates }) {
   const map = useMap();
 
   useEffect(() => {
-    const withCoords = aggregates.filter((agg) => agg.coords);
+    const withCoords = aggregates.filter((agg) => agg.coords && agg.distanceMiles !== undefined);
     if (withCoords.length === 0) return;
 
     const L = require("leaflet");
+
+    // Filter out outliers: exclude ZIPs beyond 95th percentile distance
+    const distances = withCoords.map(agg => agg.distanceMiles!).sort((a, b) => a - b);
+    const p95Index = Math.floor(distances.length * 0.95);
+    const maxDistance = distances[p95Index] || distances[distances.length - 1];
+
+    // Only include ZIPs within the 95th percentile distance
+    const nonOutliers = withCoords.filter(agg => agg.distanceMiles! <= maxDistance);
+
+    // If we filtered out too many (>20%), include more
+    const includeZips = nonOutliers.length < withCoords.length * 0.8
+      ? withCoords
+      : nonOutliers;
+
     const bounds = L.latLngBounds(
-      withCoords.map((agg) => [agg.coords!.lat, agg.coords!.lon])
+      includeZips.map((agg) => [agg.coords!.lat, agg.coords!.lon])
     );
 
-    // Include synagogue in bounds (passed as prop from parent)
-    // bounds.extend([synagogueCoords.lat, synagogueCoords.lon]);
+    // Always include synagogue in bounds
+    bounds.extend([synagogueCoords.lat, synagogueCoords.lon]);
 
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
-  }, [map, aggregates]);
+  }, [map, aggregates, synagogueCoords]);
 
   return null;
 }
@@ -150,7 +164,7 @@ export function ZipMap({ aggregates, synagogueCoords, synagogueAddress }: ZipMap
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          <MapBounds aggregates={withCoords} />
+          <MapBounds aggregates={withCoords} synagogueCoords={synagogueCoords} />
 
           {/* Synagogue marker */}
           <Marker position={[synagogueCoords.lat, synagogueCoords.lon]}>
