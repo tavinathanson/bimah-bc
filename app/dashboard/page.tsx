@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import numeral from "numeral";
 import { AppNav } from "@/components/ui/AppNav";
 import { PublishModal } from "@/components/PublishModal";
+import { DeleteDashboardModal } from "@/components/DeleteDashboardModal";
 import { STATUS_DISPLAY_NAMES, STATUS_DISPLAY_NAMES_SHORT, DISPLAY_NAME_TO_STATUS, type StatusValue } from "@/lib/constants/statusDisplayNames";
 import { GeoToggle } from "@/components/dashboard/GeoToggle";
 import type { Coordinates } from "@/lib/geo/geocoding";
@@ -74,7 +75,7 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
   const router = useRouter();
 
   // Published dashboard metadata (only used when isPublishedView is true)
-  const [publishedMeta, setPublishedMeta] = useState<{ title: string; snapshotDate: string } | null>(null);
+  const [publishedMeta, setPublishedMeta] = useState<{ title: string; snapshotDate: string; reportId: string } | null>(null);
 
   // Filters - now support multiple selections
   const [filterCohort, setFilterCohort] = useState<string[]>([]);
@@ -100,6 +101,12 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
 
   // Publish modal state
   const [showPublishModal, setShowPublishModal] = useState(false);
+
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Tab state (Dashboard, Insights, Forecasts)
+  const [activeTab, setActiveTab] = useState<"dashboard" | "insights" | "forecasts">("dashboard");
 
   // Geographic state
   const hasZips = hasZipCodeData(data);
@@ -166,7 +173,7 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
         const metaStored = sessionStorage.getItem("publishedReportMetadata");
         if (metaStored) {
           const meta = JSON.parse(metaStored);
-          setPublishedMeta({ title: meta.title, snapshotDate: meta.snapshotDate });
+          setPublishedMeta({ title: meta.title, snapshotDate: meta.snapshotDate, reportId: meta.reportId });
         }
       }
 
@@ -541,6 +548,10 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
     setShowPublishModal(true);
   };
 
+  const handleDelete = () => {
+    setShowDeleteModal(true);
+  };
+
   // Filter chart data to only show selected options when filters are active
   const statusChartData = statusMetrics
     .filter((s) => filterStatus.length === 0 || filterStatus.includes(s.status))
@@ -776,6 +787,7 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
           showExport={true}
           onPublish={handlePublish}
           showPublish={!isPublishedView}
+          onDelete={isPublishedView ? handleDelete : undefined}
           isPublishedView={isPublishedView}
           publishedTitle={publishedMeta?.title}
           publishedDate={publishedMeta?.snapshotDate ? new Date(publishedMeta.snapshotDate).toLocaleDateString('en-US', {
@@ -799,6 +811,45 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
           </div>
         )}
 
+        {/* Dashboard Tabs - Hide Insights/Forecasts on published views */}
+        {!isPublishedView && (
+          <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-2">
+            <div className="flex gap-1">
+              <button
+                onClick={() => setActiveTab("dashboard")}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  activeTab === "dashboard"
+                    ? "bg-[#1886d9] text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setActiveTab("insights")}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  activeTab === "insights"
+                    ? "bg-[#1886d9] text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Insights
+              </button>
+              <button
+                onClick={() => setActiveTab("forecasts")}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  activeTab === "forecasts"
+                    ? "bg-[#1886d9] text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Forecasts
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Dashboard Content - Always show for now */}
         <Card className="border-0 shadow-lg shadow-blue-100/50 bg-white/70 backdrop-blur-sm">
           <CardContent className="p-4 md:p-6 space-y-4">
             {/* Main Filter Bar */}
@@ -1920,6 +1971,16 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
         onClose={() => setShowPublishModal(false)}
         data={data}
       />
+
+      {/* Delete Modal */}
+      {publishedMeta && (
+        <DeleteDashboardModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          reportId={publishedMeta.reportId}
+          dashboardTitle={publishedMeta.title}
+        />
+      )}
     </div>
   );
 }

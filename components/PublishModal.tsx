@@ -51,6 +51,17 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
       const result = await response.json();
       setReportUrl(result.url);
       setPublished(true);
+
+      // Store in recent dashboards (localStorage)
+      const recentDashboards = JSON.parse(localStorage.getItem("recentDashboards") || "[]");
+      recentDashboards.unshift({
+        title: title.trim(),
+        url: result.url,
+        reportId: result.reportId,
+        publishedAt: new Date().toISOString(),
+      });
+      // Keep only last 10
+      localStorage.setItem("recentDashboards", JSON.stringify(recentDashboards.slice(0, 10)));
     } catch (error) {
       console.error("Publishing error:", error);
       alert("Failed to publish dashboard. Please try again.");
@@ -231,16 +242,20 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
                 </div>
 
                 <h3 className="text-center text-xl font-semibold text-gray-900 mb-2">
-                  Report Published!
+                  Dashboard Published!
                 </h3>
-                <p className="text-center text-gray-600 mb-6">
-                  Copy the link below and share it with your board members.
-                </p>
+
+                {/* Save this link */}
+                <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-900">
+                    <strong>Save this link somewhere safe (email it to yourself, save in a doc, etc).</strong> This browser will remember it under "Recently Published", but only on this computer.
+                  </p>
+                </div>
 
                 {/* Link with Copy Button - Prominent */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Shareable Link
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Your Shareable Link
                   </label>
                   <div className="flex gap-2">
                     <Input
