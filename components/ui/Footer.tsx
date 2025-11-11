@@ -2,7 +2,7 @@ import { BimahLogoWithText } from "./BimahLogoWithText";
 
 export function Footer() {
   return (
-    <footer className="mt-12 py-6 border-t border-slate-200 bg-white/50">
+    <footer className="py-6 border-t border-slate-200 bg-transparent">
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-600">
           <div className="flex items-center gap-3">

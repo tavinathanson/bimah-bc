@@ -34,7 +34,7 @@ export function RecentDashboards() {
   }
 
   return (
-    <Card className="border-0 shadow-lg shadow-blue-100/50 bg-white/70 backdrop-blur-sm">
+    <Card className="border border-gray-100 shadow-lg bg-white/70 backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Clock className="h-5 w-5 text-[#1886d9]" />
