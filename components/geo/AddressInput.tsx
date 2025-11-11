@@ -49,8 +49,26 @@ export function AddressInput({ onAddressSelect, defaultAddress, defaultCoords }:
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Debounced search
+  // Reset query when parent clears the address
   useEffect(() => {
+    if (!defaultAddress) {
+      setQuery("");
+      setSelectedAddress("");
+      setSelectedCoords(undefined);
+      setResults([]);
+      setShowResults(false);
+    }
+  }, [defaultAddress]);
+
+  // Debounced search - only when user is actively typing (query differs from selected)
+  useEffect(() => {
+    // Don't search if query matches the selected address (user just selected it)
+    if (query === selectedAddress) {
+      setResults([]);
+      setShowResults(false);
+      return;
+    }
+
     if (query.length < 3) {
       setResults([]);
       setShowResults(false);
@@ -72,7 +90,7 @@ export function AddressInput({ onAddressSelect, defaultAddress, defaultCoords }:
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [query]);
+  }, [query, selectedAddress]);
 
   const searchAddress = async (searchQuery: string) => {
     setIsSearching(true);
@@ -157,6 +175,7 @@ export function AddressInput({ onAddressSelect, defaultAddress, defaultCoords }:
     setSelectedAddress(address);
     setSelectedCoords(coords);
     setShowResults(false);
+    setResults([]); // Clear results to prevent dropdown from reappearing
 
     // Immediately trigger the callback
     onAddressSelect(address, coords);
@@ -167,7 +186,7 @@ export function AddressInput({ onAddressSelect, defaultAddress, defaultCoords }:
       <div className="flex items-start gap-2">
         <div className="flex-1 relative" ref={wrapperRef}>
           <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
               type="text"
               placeholder="Search by address or synagogue name..."
@@ -179,7 +198,9 @@ export function AddressInput({ onAddressSelect, defaultAddress, defaultCoords }:
               className="pl-10"
             />
             {isSearching && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+              </div>
             )}
           </div>
 
@@ -219,14 +240,8 @@ export function AddressInput({ onAddressSelect, defaultAddress, defaultCoords }:
         </div>
       </div>
 
-      {selectedCoords && (
-        <div className="text-xs text-muted-foreground">
-          Selected coordinates: {selectedCoords.lat.toFixed(4)}, {selectedCoords.lon.toFixed(4)}
-        </div>
-      )}
-
       <div className="text-xs text-muted-foreground">
-        Type at least 3 characters to search for an address. Powered by OpenStreetMap Nominatim.
+        Type at least 3 characters to search for an address
       </div>
     </div>
   );

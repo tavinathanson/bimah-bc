@@ -1,102 +1,86 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { MapPin, ChevronDown } from "lucide-react";
+import { MapPin, ChevronDown, ChevronUp } from "lucide-react";
 import { AddressInput } from "@/components/geo/AddressInput";
 import type { Coordinates } from "@/lib/geo/geocoding";
 
-const STORAGE_KEY_ADDRESS = "bimah_bc_synagogue_address";
-const STORAGE_KEY_COORDS = "bimah_bc_synagogue_coords";
-
 interface GeoToggleProps {
-  onAddressChange: (address: string | null, coords: Coordinates | null) => void;
+  synagogueAddress: string;
+  synagogueCoords: Coordinates | null;
+  onAddressSelect: (address: string, coords: Coordinates) => void;
+  onClear: () => void;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  renderButton: boolean;
 }
 
-export function GeoToggle({ onAddressChange }: GeoToggleProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [synagogueAddress, setSynagogueAddress] = useState<string>("");
-  const [synagogueCoords, setSynagogueCoords] = useState<Coordinates | null>(null);
+export function GeoToggle({
+  synagogueAddress,
+  synagogueCoords,
+  onAddressSelect,
+  onClear,
+  isOpen,
+  setIsOpen,
+  renderButton
+}: GeoToggleProps) {
 
-  // Load saved address on mount
-  useEffect(() => {
-    const savedAddress = localStorage.getItem(STORAGE_KEY_ADDRESS);
-    const savedCoordsStr = localStorage.getItem(STORAGE_KEY_COORDS);
-
-    if (savedAddress && savedCoordsStr) {
-      try {
-        const savedCoords = JSON.parse(savedCoordsStr) as Coordinates;
-        setSynagogueAddress(savedAddress);
-        setSynagogueCoords(savedCoords);
-        onAddressChange(savedAddress, savedCoords);
-      } catch (e) {
-        console.error("Failed to parse saved coordinates:", e);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
-
-  const handleAddressSelect = (address: string, coords: Coordinates) => {
-    setSynagogueAddress(address);
-    setSynagogueCoords(coords);
-
-    // Save to localStorage
-    localStorage.setItem(STORAGE_KEY_ADDRESS, address);
-    localStorage.setItem(STORAGE_KEY_COORDS, JSON.stringify(coords));
-
-    // Notify parent
-    onAddressChange(address, coords);
-    setIsOpen(false);
-  };
-
-  const handleClear = () => {
-    setSynagogueAddress("");
-    setSynagogueCoords(null);
-    localStorage.removeItem(STORAGE_KEY_ADDRESS);
-    localStorage.removeItem(STORAGE_KEY_COORDS);
-    onAddressChange(null, null);
-    setIsOpen(false);
-  };
-
-  return (
-    <div className="relative">
+  if (renderButton) {
+    return (
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 px-2 py-1 text-xs border rounded hover:bg-muted/50 ${synagogueCoords ? "border-purple-400 text-purple-700" : "text-muted-foreground"}`}
+        className={`flex items-center gap-1.5 px-3 py-2 text-xs border rounded-lg hover:bg-slate-50/80 transition-all duration-200 ${
+          synagogueCoords
+            ? "ring-2 ring-purple-400/50 border-purple-400 bg-purple-50/50 shadow-sm"
+            : "border-slate-200 bg-white shadow-sm hover:shadow"
+        }`}
       >
         <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-        <span className="truncate">
+        <span className={`flex-1 text-left truncate ${synagogueCoords ? "" : "text-muted-foreground"}`}>
           {synagogueCoords ? synagogueAddress.split(",")[0] : "Set Location"}
         </span>
-        <ChevronDown className="h-3 w-3 flex-shrink-0" />
+        {isOpen ? (
+          <ChevronUp className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+        )}
+      </button>
+    );
+  }
+
+  // Render drawer
+  if (!isOpen) return null;
+
+  return (
+    <div className="p-4 bg-slate-50/50 border border-slate-200 rounded-lg max-w-2xl relative">
+      {/* Close button */}
+      <button
+        onClick={() => setIsOpen(false)}
+        className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground hover:bg-slate-200/50 rounded transition-colors"
+        aria-label="Close"
+      >
+        <ChevronUp className="h-4 w-4" />
       </button>
 
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute z-20 mt-1 w-full min-w-[300px] md:min-w-[400px] bg-white border rounded-md shadow-lg p-4">
-            <div className="mb-3">
-              <h4 className="text-sm font-medium mb-2">Set Your Location</h4>
-              <p className="text-xs text-muted-foreground mb-3">
-                Enter your address to enable geographic analysis
-              </p>
-            </div>
+      <div className="mb-3 pr-6">
+        <h4 className="text-sm font-medium mb-1">Set Your Location</h4>
+        <p className="text-xs text-muted-foreground">
+          Enter your address to enable geographic analysis
+        </p>
+      </div>
 
-            <AddressInput
-              onAddressSelect={handleAddressSelect}
-              defaultAddress={synagogueAddress}
-              defaultCoords={synagogueCoords || undefined}
-            />
+      <AddressInput
+        onAddressSelect={onAddressSelect}
+        defaultAddress={synagogueAddress}
+        defaultCoords={synagogueCoords || undefined}
+      />
 
-            {synagogueCoords && (
-              <button
-                onClick={handleClear}
-                className="mt-3 text-xs text-muted-foreground hover:text-foreground underline"
-              >
-                Clear location
-              </button>
-            )}
-          </div>
-        </>
+      {synagogueCoords && (
+        <button
+          onClick={onClear}
+          className="mt-3 text-xs text-muted-foreground hover:text-foreground underline"
+        >
+          Clear location
+        </button>
       )}
     </div>
   );

@@ -93,13 +93,44 @@ export default function DashboardPage() {
   // Geographic state
   const hasZips = hasZipCodeData(data);
   const [geoEnabled, setGeoEnabled] = useState(false);
-  const [synagogueAddress, setSynagogueAddress] = useState<string | null>(null);
+  const [geoToggleOpen, setGeoToggleOpen] = useState(false);
+  const [synagogueAddress, setSynagogueAddress] = useState<string>("");
   const [synagogueCoords, setSynagogueCoords] = useState<Coordinates | null>(null);
   const [geoAggregates, setGeoAggregates] = useState<ZipAggregate[]>([]);
   const [isGeocoding, setIsGeocoding] = useState(false);
 
   // Geographic filters (only active when location is set)
   const [filterDistance, setFilterDistance] = useState<string[]>([]);
+
+  // Load saved geographic location on mount
+  useEffect(() => {
+    const savedAddress = localStorage.getItem("bimah_bc_synagogue_address");
+    const savedCoordsStr = localStorage.getItem("bimah_bc_synagogue_coords");
+
+    if (savedAddress && savedCoordsStr) {
+      try {
+        const savedCoords = JSON.parse(savedCoordsStr) as Coordinates;
+        setSynagogueAddress(savedAddress);
+        setSynagogueCoords(savedCoords);
+      } catch (e) {
+        console.error("Failed to parse saved coordinates:", e);
+      }
+    }
+  }, []);
+
+  const handleGeoAddressSelect = (address: string, coords: Coordinates) => {
+    setSynagogueAddress(address);
+    setSynagogueCoords(coords);
+    localStorage.setItem("bimah_bc_synagogue_address", address);
+    localStorage.setItem("bimah_bc_synagogue_coords", JSON.stringify(coords));
+  };
+
+  const handleGeoClear = () => {
+    setSynagogueAddress("");
+    setSynagogueCoords(null);
+    localStorage.removeItem("bimah_bc_synagogue_address");
+    localStorage.removeItem("bimah_bc_synagogue_coords");
+  };
 
   // Enable geo by default when ZIP data is detected
   useEffect(() => {
@@ -753,40 +784,60 @@ export default function DashboardPage() {
               </div>
 
               {/* Geographic Location Setting - Compact */}
-              <div className="border-t pt-2">
-                <div className="flex items-center gap-2 min-h-[32px]">
-                  <label className="text-xs text-muted-foreground">Geographic:</label>
-                  <button
-                    onClick={() => {
-                      if (!hasZips && !geoEnabled) {
-                        alert("ZIP code data not available in the imported file. Geographic analysis requires a ZIP code column.");
-                      } else {
-                        setGeoEnabled(!geoEnabled);
-                      }
-                    }}
-                    className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded transition-colors ${
-                      geoEnabled
-                        ? "bg-purple-100 text-purple-700"
-                        : hasZips
-                        ? "bg-muted/50 text-muted-foreground hover:bg-muted"
-                        : "bg-muted/30 text-muted-foreground/50 cursor-not-allowed"
-                    }`}
-                    disabled={!hasZips && !geoEnabled}
-                  >
-                    {geoEnabled ? "ON" : "OFF"}
-                  </button>
-                  {geoEnabled && (
-                    <div className="flex-1">
-                      <GeoToggle
-                        onAddressChange={(address, coords) => {
-                          setSynagogueAddress(address);
-                          setSynagogueCoords(coords);
+              <div className="border-t pt-3 pb-2">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <div className="flex items-center gap-2 min-h-[32px] pt-0.5">
+                      <label className="text-xs text-muted-foreground whitespace-nowrap">Geographic:</label>
+                      <button
+                        onClick={() => {
+                          if (!hasZips && !geoEnabled) {
+                            alert("ZIP code data not available in the imported file. Geographic analysis requires a ZIP code column.");
+                          } else {
+                            setGeoEnabled(!geoEnabled);
+                          }
                         }}
-                      />
+                        className={`px-2 py-1 text-xs border rounded-lg transition-all duration-200 whitespace-nowrap ${
+                          geoEnabled
+                            ? "ring-2 ring-purple-400/50 border-purple-400 bg-purple-50/50 shadow-sm"
+                            : hasZips
+                            ? "border-slate-200 bg-white text-muted-foreground hover:bg-slate-50/80 shadow-sm"
+                            : "border-slate-200 bg-muted/30 text-muted-foreground/50 cursor-not-allowed"
+                        }`}
+                        disabled={!hasZips && !geoEnabled}
+                      >
+                        {geoEnabled ? "ON" : "OFF"}
+                      </button>
                     </div>
-                  )}
-                  {!hasZips && (
-                    <span className="text-xs text-muted-foreground italic">ZIP code data not available</span>
+
+                    {geoEnabled ? (
+                      <div className="flex-1 min-w-0">
+                        <GeoToggle
+                          synagogueAddress={synagogueAddress}
+                          synagogueCoords={synagogueCoords}
+                          onAddressSelect={handleGeoAddressSelect}
+                          onClear={handleGeoClear}
+                          isOpen={geoToggleOpen}
+                          setIsOpen={setGeoToggleOpen}
+                          renderButton={true}
+                        />
+                      </div>
+                    ) : !hasZips ? (
+                      <span className="text-xs text-muted-foreground italic pt-1.5">ZIP code data not available</span>
+                    ) : null}
+                  </div>
+
+                  {/* Drawer appears here at full width */}
+                  {geoEnabled && (
+                    <GeoToggle
+                      synagogueAddress={synagogueAddress}
+                      synagogueCoords={synagogueCoords}
+                      onAddressSelect={handleGeoAddressSelect}
+                      onClear={handleGeoClear}
+                      isOpen={geoToggleOpen}
+                      setIsOpen={setGeoToggleOpen}
+                      renderButton={false}
+                    />
                   )}
                 </div>
               </div>
