@@ -63,19 +63,19 @@ export default function InsightsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-5 md:space-y-6">
         <AppNav />
 
         {/* Key Metrics Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <Card>
-            <CardHeader className="py-4 md:py-6">
-              <CardDescription className="text-xs md:text-sm flex items-center gap-2 mb-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardHeader className="py-5 md:py-6">
+              <CardDescription className="text-xs md:text-sm flex items-center gap-2 mb-2 font-medium text-slate-600">
                 <Users className="h-4 w-4" />
                 Retention Rate
               </CardDescription>
-              <CardTitle className="text-2xl md:text-3xl text-green-600">
+              <CardTitle className="text-3xl md:text-4xl font-bold text-green-600">
                 {formatPercent(insights.retentionRate)}
               </CardTitle>
               <CardDescription className="text-xs mt-2">
@@ -84,13 +84,13 @@ export default function InsightsPage() {
             </CardHeader>
           </Card>
 
-          <Card>
-            <CardHeader className="py-4 md:py-6">
-              <CardDescription className="text-xs md:text-sm flex items-center gap-2 mb-2">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardHeader className="py-5 md:py-6">
+              <CardDescription className="text-xs md:text-sm flex items-center gap-2 mb-2 font-medium text-slate-600">
                 <TrendingUp className="h-4 w-4" />
                 Upgrade Rate
               </CardDescription>
-              <CardTitle className="text-2xl md:text-3xl text-blue-600">
+              <CardTitle className="text-3xl md:text-4xl font-bold text-blue-600">
                 {formatPercent(insights.upgradeDowngradeRates.upgradeRate)}
               </CardTitle>
               <CardDescription className="text-xs mt-2">
@@ -99,13 +99,13 @@ export default function InsightsPage() {
             </CardHeader>
           </Card>
 
-          <Card>
-            <CardHeader className="py-4 md:py-6">
-              <CardDescription className="text-xs md:text-sm flex items-center gap-2 mb-2">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardHeader className="py-5 md:py-6">
+              <CardDescription className="text-xs md:text-sm flex items-center gap-2 mb-2 font-medium text-slate-600">
                 <TrendingDown className="h-4 w-4" />
                 Downgrade Rate
               </CardDescription>
-              <CardTitle className="text-2xl md:text-3xl text-orange-600">
+              <CardTitle className="text-3xl md:text-4xl font-bold text-orange-600">
                 {formatPercent(insights.upgradeDowngradeRates.downgradeRate)}
               </CardTitle>
               <CardDescription className="text-xs mt-2">
@@ -114,13 +114,13 @@ export default function InsightsPage() {
             </CardHeader>
           </Card>
 
-          <Card>
-            <CardHeader className="py-4 md:py-6">
-              <CardDescription className="text-xs md:text-sm flex items-center gap-2 mb-2">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardHeader className="py-5 md:py-6">
+              <CardDescription className="text-xs md:text-sm flex items-center gap-2 mb-2 font-medium text-slate-600">
                 <BarChart3 className="h-4 w-4" />
                 Mean Age
               </CardDescription>
-              <CardTitle className="text-2xl md:text-3xl">
+              <CardTitle className="text-3xl md:text-4xl font-bold">
                 {formatNumber(insights.ageStats.mean, 0)}
               </CardTitle>
               <CardDescription className="text-xs mt-2">
@@ -131,10 +131,10 @@ export default function InsightsPage() {
         </div>
 
         {/* Pledge Concentration */}
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-              <Award className="h-5 w-5" />
+            <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+              <Award className="h-5 w-5 text-[#e6aa0f]" />
               Pledge Concentration Analysis
             </CardTitle>
             <CardDescription>
@@ -193,10 +193,10 @@ export default function InsightsPage() {
         </Card>
 
         {/* New vs. Renewed Comparison */}
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-              <Target className="h-5 w-5" />
+            <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+              <Target className="h-5 w-5 text-[#1886d9]" />
               Current Year Only vs. Renewed Pledgers
             </CardTitle>
             <CardDescription>Average current pledge: Current year only vs. Renewed (excludes $0 pledges)</CardDescription>
@@ -230,9 +230,9 @@ export default function InsightsPage() {
         </Card>
 
         {/* Generational Giving */}
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Generational Giving Patterns</CardTitle>
+            <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Generational Giving Patterns</CardTitle>
             <CardDescription>Current pledges grouped by generation (ages as of current FY, excludes $0)</CardDescription>
           </CardHeader>
           <CardContent>
@@ -264,9 +264,9 @@ export default function InsightsPage() {
         </Card>
 
         {/* Pledge Change Behavior */}
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl">How Much Do Pledges Change?</CardTitle>
+            <CardTitle className="text-lg md:text-xl font-bold text-slate-800">How Much Do Pledges Change?</CardTitle>
             <CardDescription>Patterns in pledge changes year-over-year (renewed pledgers only)</CardDescription>
           </CardHeader>
           <CardContent>
@@ -303,9 +303,9 @@ export default function InsightsPage() {
         </Card>
 
         {/* Average Pledge by Age Cohort */}
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Average Pledge by Age Cohort</CardTitle>
+            <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Average Pledge by Age Cohort</CardTitle>
             <CardDescription>Mean current pledge per age group (excludes $0 pledges)</CardDescription>
           </CardHeader>
           <CardContent>

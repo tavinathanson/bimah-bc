@@ -123,8 +123,8 @@ export default function UploadPage() {
   const allValidated = files.length > 0 && files.every((f) => f.status === "validated");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-5 md:space-y-6">
         <div className="flex items-center gap-3 md:gap-4">
           <button
             onClick={() => router.push("/")}
@@ -145,26 +145,26 @@ export default function UploadPage() {
         </div>
 
         {/* Privacy Notice */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3 md:p-4">
+        <div className="bg-gradient-to-r from-green-50/90 to-emerald-50/70 border border-green-200/60 rounded-xl p-3 md:p-4 shadow-sm">
           <div className="flex items-center gap-2">
             <svg className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
             <div className="text-xs md:text-sm text-green-900">
-              <strong>Your data stays private:</strong> Files are processed entirely in your browser and never sent to any server.
+              <strong className="font-semibold">Your data stays private:</strong> Files are processed entirely in your browser and never sent to any server.
             </div>
           </div>
         </div>
 
         {files.length === 0 ? (
-          <Card>
+          <Card className="border-0 shadow-lg shadow-blue-100/50 bg-white/70 backdrop-blur-sm">
             <CardContent className="pt-6 space-y-4">
               <div
                 {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
+                className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all duration-200 ${
                   isDragActive
-                    ? "border-primary bg-primary/5"
-                    : "border-muted-foreground/25 hover:border-primary/50"
+                    ? "border-blue-500 bg-blue-50/50 shadow-sm"
+                    : "border-slate-300 hover:border-blue-400 hover:bg-blue-50/30"
                 }`}
               >
                 <input {...getInputProps()} />
@@ -213,10 +213,10 @@ export default function UploadPage() {
                 <button
                   key={idx}
                   onClick={() => setCurrentFileIndex(idx)}
-                  className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                  className={`w-full text-left p-3 rounded-lg border transition-all duration-200 ${
                     currentFileIndex === idx
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
+                      ? "border-blue-500 bg-blue-50/50 shadow-sm ring-2 ring-blue-400/30"
+                      : "border-slate-200 hover:border-blue-400 hover:bg-slate-50"
                   }`}
                 >
                   <div className="flex items-start gap-2">
@@ -246,7 +246,7 @@ export default function UploadPage() {
               ))}
               <div
                 {...getRootProps()}
-                className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                className="border-2 border-dashed rounded-xl p-4 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 border-slate-300"
               >
                 <input {...getInputProps()} />
                 <Upload className="mx-auto h-6 w-6 text-muted-foreground mb-1" />
@@ -256,10 +256,10 @@ export default function UploadPage() {
 
             <div className="lg:col-span-3">
               {currentFile && (
-                <Card>
+                <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader>
-                    <CardTitle className="text-lg md:text-xl truncate">Configure: {currentFile.file.name}</CardTitle>
-                    <CardDescription className="text-xs md:text-sm">
+                    <CardTitle className="text-lg md:text-xl font-bold text-slate-800 truncate">Configure: {currentFile.file.name}</CardTitle>
+                    <CardDescription className="text-xs md:text-sm font-medium text-slate-500">
                       Map columns to required fields
                     </CardDescription>
                   </CardHeader>

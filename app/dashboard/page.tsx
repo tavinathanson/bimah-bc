@@ -714,12 +714,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-5 md:space-y-6">
         <AppNav onExport={handleExportExcel} showExport={true} />
 
-        <Card>
-          <CardContent className="p-3 md:p-4 space-y-3">
+        <Card className="border-0 shadow-lg shadow-blue-100/50 bg-white/70 backdrop-blur-sm">
+          <CardContent className="p-4 md:p-6 space-y-4">
             {/* Main Filter Bar */}
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2 mb-3 min-h-[28px]">
@@ -743,9 +743,9 @@ export default function DashboardPage() {
                       variant="outline"
                       size="sm"
                       onClick={clearFilters}
-                      className="gap-1 h-7 py-0"
+                      className="gap-1.5 h-8 px-3 rounded-lg border-slate-300 hover:bg-red-50 hover:border-red-400 hover:text-red-700 transition-all duration-200 shadow-sm"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                       Clear All Filters
                     </Button>
                   </div>
@@ -802,7 +802,7 @@ export default function DashboardPage() {
                   </div>
                   <button
                     onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${filterStatus.length > 0 ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm border rounded-lg hover:bg-slate-50/80 transition-all duration-200 ${filterStatus.length > 0 ? "ring-2 ring-blue-400/50 border-blue-400 bg-blue-50/50 shadow-sm" : "border-slate-200 bg-white shadow-sm hover:shadow"}`}
                   >
                     <span className={filterStatus.length === 0 ? "text-muted-foreground" : ""}>
                       {filterStatus.length === 0
@@ -818,7 +818,7 @@ export default function DashboardPage() {
                   {statusDropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setStatusDropdownOpen(false)} />
-                      <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg">
+                      <div className="absolute z-20 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50">
                         {filterStatus.length > 0 && (
                           <button
                             onClick={() => setFilterStatus([])}
@@ -860,7 +860,7 @@ export default function DashboardPage() {
                   </div>
                   <button
                     onClick={() => setPledgeDropdownOpen(!pledgeDropdownOpen)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${(filterBin.length > 0 || pledgeMode === "custom") ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm border rounded-lg hover:bg-slate-50/80 transition-all duration-200 ${(filterBin.length > 0 || pledgeMode === "custom") ? "ring-2 ring-blue-400/50 border-blue-400 bg-blue-50/50 shadow-sm" : "border-slate-200 bg-white shadow-sm hover:shadow"}`}
                   >
                     <span className={(filterBin.length === 0 && pledgeMode !== "custom") ? "text-muted-foreground" : ""}>
                       {filterBin.length === 0 && pledgeMode !== "custom"
@@ -884,7 +884,7 @@ export default function DashboardPage() {
                   {pledgeDropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setPledgeDropdownOpen(false)} />
-                      <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg max-h-80 overflow-y-auto">
+                      <div className="absolute z-20 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50 max-h-80 overflow-y-auto">
                         {(filterBin.length > 0 || pledgeMode === "custom") && (
                           <button
                             onClick={() => {
@@ -982,7 +982,7 @@ export default function DashboardPage() {
                   </div>
                   <button
                     onClick={() => setAgeDropdownOpen(!ageDropdownOpen)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${(filterCohort.length > 0 || ageCustomEnabled) ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm border rounded-lg hover:bg-slate-50/80 transition-all duration-200 ${(filterCohort.length > 0 || ageCustomEnabled) ? "ring-2 ring-blue-400/50 border-blue-400 bg-blue-50/50 shadow-sm" : "border-slate-200 bg-white shadow-sm hover:shadow"}`}
                   >
                     <span className={(filterCohort.length === 0 && !ageCustomEnabled) ? "text-muted-foreground" : ""}>
                       {filterCohort.length === 0 && !ageCustomEnabled
@@ -1006,7 +1006,7 @@ export default function DashboardPage() {
                   {ageDropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setAgeDropdownOpen(false)} />
-                      <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg max-h-80 overflow-y-auto">
+                      <div className="absolute z-20 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50 max-h-80 overflow-y-auto">
                         {(filterCohort.length > 0 || ageCustomEnabled) && (
                           <button
                             onClick={() => {
@@ -1101,7 +1101,7 @@ export default function DashboardPage() {
                   </div>
                   <button
                     onClick={() => setChangeDropdownOpen(!changeDropdownOpen)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${filterChange.length > 0 ? "ring-2 ring-blue-400 border-blue-400" : ""}`}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm border rounded-lg hover:bg-slate-50/80 transition-all duration-200 ${filterChange.length > 0 ? "ring-2 ring-blue-400/50 border-blue-400 bg-blue-50/50 shadow-sm" : "border-slate-200 bg-white shadow-sm hover:shadow"}`}
                   >
                     <span className={filterChange.length === 0 ? "text-muted-foreground" : ""}>
                       {filterChange.length === 0
@@ -1122,7 +1122,7 @@ export default function DashboardPage() {
                   {changeDropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setChangeDropdownOpen(false)} />
-                      <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg">
+                      <div className="absolute z-20 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50">
                         {filterChange.length > 0 && (
                           <button
                             onClick={() => setFilterChange([])}
@@ -1169,7 +1169,7 @@ export default function DashboardPage() {
                     </div>
                     <button
                       onClick={() => setDistanceDropdownOpen(!distanceDropdownOpen)}
-                      className={`w-full flex items-center justify-between px-3 py-2 text-sm border rounded-md hover:bg-muted/50 ${filterDistance.length > 0 ? "ring-2 ring-purple-400 border-purple-400" : ""}`}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 text-sm border rounded-lg hover:bg-slate-50/80 transition-all duration-200 ${filterDistance.length > 0 ? "ring-2 ring-purple-400/50 border-purple-400 bg-purple-50/50 shadow-sm" : "border-slate-200 bg-white shadow-sm hover:shadow"}`}
                     >
                       <span className={filterDistance.length === 0 ? "text-muted-foreground" : ""}>
                         {filterDistance.length === 0 ? "All Distances" : `${filterDistance.length} selected`}
@@ -1179,7 +1179,7 @@ export default function DashboardPage() {
                     {distanceDropdownOpen && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setDistanceDropdownOpen(false)} />
-                        <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg">
+                        <div className="absolute z-20 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50">
                           {filterDistance.length > 0 && (
                             <button
                               onClick={() => setFilterDistance([])}
@@ -1217,14 +1217,14 @@ export default function DashboardPage() {
 
             {/* Active Filters Summary */}
             {hasActiveFilters && (
-              <div className="bg-blue-50/80 border border-blue-200 rounded-lg p-3">
+              <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/70 border border-blue-200/60 rounded-xl p-3 shadow-sm">
                 <div className="flex items-start gap-2">
                   <Filter className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-blue-900 mb-1">Active Filters:</div>
+                    <div className="text-xs font-semibold text-blue-900 mb-1.5">Active Filters:</div>
                     <div className="flex flex-wrap gap-2">
                       {getFilterSummaryText().map((summary, idx) => (
-                        <div key={idx} className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 px-2 py-1 rounded text-xs font-medium">
+                        <div key={idx} className="inline-flex items-center gap-1 bg-white/80 text-blue-900 px-2.5 py-1 rounded-lg text-xs font-medium shadow-sm border border-blue-100">
                           {summary}
                         </div>
                       ))}
@@ -1256,11 +1256,11 @@ export default function DashboardPage() {
         </Card>
 
         {hasActiveFilters && (
-          <div className="bg-blue-50/80 backdrop-blur-sm border border-blue-200 rounded-lg p-2 md:p-3">
+          <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/70 backdrop-blur-sm border border-blue-200/60 rounded-xl p-3 md:p-4 shadow-sm">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-blue-600 flex-shrink-0" />
               <div className="text-xs md:text-sm text-blue-900">
-                <strong>Filtered View:</strong> Showing {totals.totalHouseholds} of {data.length} households. All metrics and charts below reflect the active filters.
+                <strong className="font-semibold">Filtered View:</strong> Showing {totals.totalHouseholds} of {data.length} households. All metrics and charts below reflect the active filters.
               </div>
             </div>
           </div>
@@ -1283,11 +1283,11 @@ export default function DashboardPage() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <Card className={hasActiveFilters ? "border-l-4 border-l-blue-400" : ""}>
-            <CardHeader className="py-4 md:py-6">
-              <CardDescription className="text-xs md:text-sm mb-2">Total Households</CardDescription>
-              <CardTitle className="text-2xl md:text-3xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+          <Card className={`border-0 shadow-lg hover:shadow-xl transition-all duration-300 ${hasActiveFilters ? "ring-2 ring-blue-400/50 ring-offset-2" : ""}`}>
+            <CardHeader className="py-5 md:py-6">
+              <CardDescription className="text-xs md:text-sm mb-2 font-medium text-slate-600">Total Households</CardDescription>
+              <CardTitle className="text-3xl md:text-4xl font-bold bg-gradient-to-br from-blue-600 to-blue-400 bg-clip-text text-transparent">
                 {totals.totalHouseholds}
                 {hasActiveFilters && (
                   <span className="text-base md:text-lg text-muted-foreground font-normal ml-2">
@@ -1298,61 +1298,62 @@ export default function DashboardPage() {
             </CardHeader>
           </Card>
 
-          <Card>
-            <CardHeader className="py-4 md:py-6">
-              <CardDescription className="text-xs md:text-sm mb-2">Current Pledges</CardDescription>
-              <CardTitle className="text-2xl md:text-3xl">{formatCurrency(totals.totalPledgedCurrent)}</CardTitle>
-              <CardDescription className="text-xs md:text-sm mt-2">
-                Average: {formatCurrency(totals.totalPledgedCurrent / totals.totalHouseholds)}
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardHeader className="py-5 md:py-6">
+              <CardDescription className="text-xs md:text-sm mb-2 font-medium text-slate-600">Current Pledges</CardDescription>
+              <CardTitle className="text-2xl md:text-3xl font-bold">{formatCurrency(totals.totalPledgedCurrent)}</CardTitle>
+              <CardDescription className="text-xs md:text-sm mt-2.5 text-slate-500">
+                Average: <span className="font-semibold text-slate-700">{formatCurrency(totals.totalPledgedCurrent / totals.totalHouseholds)}</span>
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card>
-            <CardHeader className="py-4 md:py-6">
-              <CardDescription className="text-xs md:text-sm mb-2">Change from Prior Year</CardDescription>
-              <CardTitle className={`text-2xl md:text-3xl flex items-center gap-2 ${totals.deltaDollar >= 0 ? "text-green-600" : "text-red-600"}`}>
-                <span>{totals.deltaDollar >= 0 ? "↑" : "↓"}</span>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative">
+            <div className={`absolute inset-0 opacity-5 ${totals.deltaDollar >= 0 ? "bg-green-500" : "bg-red-500"}`} />
+            <CardHeader className="py-5 md:py-6 relative">
+              <CardDescription className="text-xs md:text-sm mb-2 font-medium text-slate-600">Change from Prior Year</CardDescription>
+              <CardTitle className={`text-2xl md:text-3xl flex items-center gap-2 font-bold ${totals.deltaDollar >= 0 ? "text-green-600" : "text-red-600"}`}>
+                <span className="text-2xl">{totals.deltaDollar >= 0 ? "↑" : "↓"}</span>
                 <span>{formatCurrency(Math.abs(totals.deltaDollar))}</span>
               </CardTitle>
-              <CardDescription className="text-xs md:text-sm mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className={totals.deltaDollar >= 0 ? "text-green-600" : "text-red-600"}>
+              <CardDescription className="text-xs md:text-sm mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className={`font-semibold ${totals.deltaDollar >= 0 ? "text-green-600" : "text-red-600"}`}>
                   {formatPercent(totals.deltaPercent)} {totals.deltaDollar >= 0 ? "increase" : "decrease"}
                 </span>
-                <span className="text-muted-foreground">
-                  Prior: {formatCurrency(totals.totalPledgedPrior)}
+                <span className="text-slate-500">
+                  Prior: <span className="font-medium">{formatCurrency(totals.totalPledgedPrior)}</span>
                 </span>
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card>
-            <CardHeader className="py-4 md:py-6">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardHeader className="py-5 md:py-6">
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-4 min-w-0">
-                  <CardDescription className="text-xs md:text-sm flex-shrink-0">Pledge Status</CardDescription>
-                  <CardDescription className="text-xs text-right truncate min-w-0">
-                    {totals.totalHouseholds} of {data.length} Households
+                  <CardDescription className="text-xs md:text-sm flex-shrink-0 font-medium text-slate-600">Pledge Status</CardDescription>
+                  <CardDescription className="text-xs text-right truncate min-w-0 text-slate-500">
+                    {totals.totalHouseholds} of {data.length}
                   </CardDescription>
                 </div>
                 <div className="flex items-baseline gap-3 md:gap-6 flex-wrap">
                   <div className="flex-shrink-0">
-                    <CardTitle className="text-2xl md:text-3xl">{totals.renewed}</CardTitle>
-                    <CardDescription className="text-xs mt-1">Renewed</CardDescription>
+                    <CardTitle className="text-2xl md:text-3xl font-bold bg-gradient-to-br from-blue-600 to-indigo-500 bg-clip-text text-transparent">{totals.renewed}</CardTitle>
+                    <CardDescription className="text-xs mt-1.5 font-medium">Renewed</CardDescription>
                   </div>
-                  <div className="hidden sm:block border-l border-border flex-shrink-0" />
+                  <div className="hidden sm:block border-l border-slate-200 flex-shrink-0" />
                   <div className="flex gap-3 md:gap-4 flex-wrap">
                     <div className="flex-shrink-0">
-                      <div className="font-semibold text-lg">{totals.currentOnly}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">New</div>
+                      <div className="font-bold text-lg text-slate-700">{totals.currentOnly}</div>
+                      <div className="text-xs text-slate-500 mt-0.5 font-medium">New</div>
                     </div>
                     <div className="flex-shrink-0">
-                      <div className="font-semibold text-lg">{totals.priorOnly}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">Lapsed</div>
+                      <div className="font-bold text-lg text-slate-700">{totals.priorOnly}</div>
+                      <div className="text-xs text-slate-500 mt-0.5 font-medium">Lapsed</div>
                     </div>
                     <div className="flex-shrink-0">
-                      <div className="font-semibold text-lg">{totals.noPledgeBoth}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">None</div>
+                      <div className="font-bold text-lg text-slate-700">{totals.noPledgeBoth}</div>
+                      <div className="text-xs text-slate-500 mt-0.5 font-medium">None</div>
                     </div>
                   </div>
                 </div>
@@ -1361,12 +1362,12 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
           {showStatusChart && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg md:text-xl">Pledge Status Distribution</CardTitle>
-                <CardDescription className="text-xs">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Pledge Status Distribution</CardTitle>
+                <CardDescription className="text-xs font-medium text-slate-500">
                   {filteredData.length} of {data.length} Households
                 </CardDescription>
               </CardHeader>
@@ -1436,10 +1437,10 @@ export default function DashboardPage() {
           )}
 
           {showChangeChart && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg md:text-xl">Renewed Pledge Changes</CardTitle>
-                <CardDescription className="text-xs">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Renewed Pledge Changes</CardTitle>
+                <CardDescription className="text-xs font-medium text-slate-500">
                   {filteredData.filter(r => r.status === "renewed").length} Renewed of {filteredData.length} Households
                 </CardDescription>
               </CardHeader>
@@ -1488,10 +1489,10 @@ export default function DashboardPage() {
           )}
 
           {showCohortChart && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg md:text-xl">Households by Age Cohort</CardTitle>
-                <CardDescription className="text-xs">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Households by Age Cohort</CardTitle>
+                <CardDescription className="text-xs font-medium text-slate-500">
                   {filteredData.length} of {data.length} Households
                 </CardDescription>
               </CardHeader>
@@ -1530,10 +1531,10 @@ export default function DashboardPage() {
           )}
 
           {showBinChart && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg md:text-xl">Households by Pledge Bin</CardTitle>
-                <CardDescription className="text-xs">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Households by Pledge Bin</CardTitle>
+                <CardDescription className="text-xs font-medium text-slate-500">
                   {filteredData.filter(r => r.pledgeCurrent > 0).length} with Pledges &gt; $0 of {filteredData.length} Households
                 </CardDescription>
               </CardHeader>
@@ -1592,13 +1593,13 @@ export default function DashboardPage() {
 
           {/* Geographic Map Card */}
           {geoEnabled && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-purple-600" />
                   Geographic Distribution
                 </CardTitle>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs font-medium text-slate-500">
                   {synagogueCoords ? `${filteredData.length} Households • ${synagogueAddress}` : "Set your location to view"}
                 </CardDescription>
               </CardHeader>
@@ -1634,13 +1635,13 @@ export default function DashboardPage() {
 
           {/* Distance Histogram Card */}
           {geoEnabled && showDistanceHistogram && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-purple-600" />
                   Distance Distribution
                 </CardTitle>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs font-medium text-slate-500">
                   {synagogueCoords ? `${filteredData.length} Households` : "Set your location to view"}
                 </CardDescription>
               </CardHeader>
@@ -1690,27 +1691,27 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Age Cohort Metrics</CardTitle>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Age Cohort Metrics</CardTitle>
           </CardHeader>
           <CardContent className="pb-4 md:pb-6">
             <div className="overflow-x-auto -mx-2 md:mx-0">
               <table className="w-full text-xs md:text-sm min-w-[600px]">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2 md:p-2 pl-2">Cohort</th>
-                    <th className="text-right p-2 md:p-2">Households</th>
-                    <th className="text-right p-2 md:p-2">Total Current</th>
-                    <th className="text-right p-2 md:p-2">Average Current</th>
-                    <th className="text-right p-2 md:p-2">Median Current</th>
-                    <th className="text-right p-2 md:p-2 pr-2">Renewal Rate</th>
+                  <tr className="border-b-2 border-slate-200 bg-slate-50/50">
+                    <th className="text-left p-3 md:p-3 pl-3 font-semibold text-slate-700">Cohort</th>
+                    <th className="text-right p-3 md:p-3 font-semibold text-slate-700">Households</th>
+                    <th className="text-right p-3 md:p-3 font-semibold text-slate-700">Total Current</th>
+                    <th className="text-right p-3 md:p-3 font-semibold text-slate-700">Average Current</th>
+                    <th className="text-right p-3 md:p-3 font-semibold text-slate-700">Median Current</th>
+                    <th className="text-right p-3 md:p-3 pr-3 font-semibold text-slate-700">Renewal Rate</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cohortMetrics.filter(c => c.householdCount > 0).map((cohort) => (
-                    <tr key={cohort.cohort} className="border-b">
-                      <td className="p-2 md:p-2 pl-2 font-medium">{cohort.cohort}</td>
+                    <tr key={cohort.cohort} className="border-b border-slate-100 hover:bg-blue-50/30 transition-colors">
+                      <td className="p-3 md:p-3 pl-3 font-semibold text-slate-700">{cohort.cohort}</td>
                       <td className="text-right p-2 md:p-2">{cohort.householdCount}</td>
                       <td className="text-right p-2 md:p-2">{formatCurrency(cohort.totalCurrent)}</td>
                       <td className="text-right p-2 md:p-2">{formatCurrency(cohort.averageCurrent)}</td>
@@ -1724,9 +1725,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg md:text-xl font-bold text-slate-800">
               {pledgeMode === "custom" ? "Custom Range Metrics" : "Pledge Bin Metrics"}
             </CardTitle>
           </CardHeader>
@@ -1734,14 +1735,14 @@ export default function DashboardPage() {
             <div className="overflow-x-auto -mx-2 md:mx-0">
               <table className="w-full text-xs md:text-sm min-w-[550px]">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2 md:p-2 pl-2">
+                  <tr className="border-b-2 border-slate-200 bg-slate-50/50">
+                    <th className="text-left p-3 md:p-3 pl-3 font-semibold text-slate-700">
                       {pledgeMode === "custom" ? "Range" : "Bin"}
                     </th>
-                    <th className="text-right p-2 md:p-2">Households</th>
-                    <th className="text-right p-2 md:p-2">Total</th>
-                    <th className="text-right p-2 md:p-2">Average</th>
-                    <th className="text-right p-2 md:p-2 pr-2">Median</th>
+                    <th className="text-right p-3 md:p-3 font-semibold text-slate-700">Households</th>
+                    <th className="text-right p-3 md:p-3 font-semibold text-slate-700">Total</th>
+                    <th className="text-right p-3 md:p-3 font-semibold text-slate-700">Average</th>
+                    <th className="text-right p-3 md:p-3 pr-3 font-semibold text-slate-700">Median</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1749,8 +1750,8 @@ export default function DashboardPage() {
                     <>
                       {/* Show $0 separately if min > 0 */}
                       {customZeroMetrics && customZeroMetrics.householdCount > 0 && (
-                        <tr className="border-b bg-muted/30">
-                          <td className="p-2 md:p-2 pl-2 font-medium text-muted-foreground">
+                        <tr className="border-b border-slate-100 bg-slate-50/50">
+                          <td className="p-3 md:p-3 pl-3 font-medium text-slate-500">
                             $0 (No Current Pledge)
                           </td>
                           <td className="text-right p-2 md:p-2">{customZeroMetrics.householdCount}</td>
@@ -1760,8 +1761,8 @@ export default function DashboardPage() {
                         </tr>
                       )}
                       {/* Custom range row */}
-                      <tr className="border-b">
-                        <td className="p-2 md:p-2 pl-2 font-medium">
+                      <tr className="border-b border-slate-100 hover:bg-blue-50/30 transition-colors">
+                        <td className="p-3 md:p-3 pl-3 font-semibold text-slate-700">
                           {minPledge && maxPledge
                             ? `${formatCurrency(minPledgeNum)} - ${formatCurrency(maxPledgeNum)}`
                             : minPledge && minPledgeNum > 0
@@ -1782,8 +1783,8 @@ export default function DashboardPage() {
                     <>
                       {/* Show $0 row first */}
                       {zeroPledgeMetrics.householdCount > 0 && (
-                        <tr className="border-b bg-muted/30">
-                          <td className="p-2 md:p-2 pl-2 font-medium text-muted-foreground">
+                        <tr className="border-b border-slate-100 bg-slate-50/50">
+                          <td className="p-3 md:p-3 pl-3 font-medium text-slate-500">
                             $0 (No Current Pledge)
                           </td>
                           <td className="text-right p-2 md:p-2">{zeroPledgeMetrics.householdCount}</td>
@@ -1794,8 +1795,8 @@ export default function DashboardPage() {
                       )}
                       {/* Standard bins */}
                       {binMetrics.filter(b => b.householdCount > 0).map((bin) => (
-                        <tr key={bin.bin} className="border-b">
-                          <td className="p-2 md:p-2 pl-2 font-medium">{bin.bin}</td>
+                        <tr key={bin.bin} className="border-b border-slate-100 hover:bg-blue-50/30 transition-colors">
+                          <td className="p-3 md:p-3 pl-3 font-semibold text-slate-700">{bin.bin}</td>
                           <td className="text-right p-2 md:p-2">{bin.householdCount}</td>
                           <td className="text-right p-2 md:p-2">{formatCurrency(bin.total)}</td>
                           <td className="text-right p-2 md:p-2">{formatCurrency(bin.average)}</td>

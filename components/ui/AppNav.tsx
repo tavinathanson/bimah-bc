@@ -17,20 +17,20 @@ export function AppNav({ onExport, showExport = false }: AppNavProps) {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white/70 backdrop-blur-sm rounded-xl p-4 md:p-5 shadow-sm border border-slate-200/50">
       <div className="flex items-center gap-3 md:gap-4 flex-shrink min-w-0 overflow-hidden">
         <button
           onClick={() => router.push("/")}
-          className="hover:opacity-80 transition-opacity flex-shrink-0"
+          className="hover:opacity-80 transition-all duration-200 flex-shrink-0"
           title="Go to home"
         >
           <BimahLogoWithText
             logoSize={24}
-            textClassName="font-mono text-xl md:text-2xl tracking-tight text-[#0e2546]"
+            textClassName="font-mono text-xl md:text-2xl tracking-tight text-[#1886d9]"
           />
         </button>
-        <div className="border-l border-border pl-3 md:pl-4 min-w-0 overflow-hidden">
-          <h1 className="text-lg md:text-2xl font-bold truncate">
+        <div className="border-l border-slate-200 pl-3 md:pl-4 min-w-0 overflow-hidden">
+          <h1 className="text-lg md:text-2xl font-bold text-slate-800 truncate">
             {pathname === "/dashboard" && "Pledge Analytics"}
             {pathname === "/insights" && "Advanced Insights"}
             {pathname === "/forecasts" && "Forecasts"}
@@ -48,7 +48,11 @@ export function AppNav({ onExport, showExport = false }: AppNavProps) {
         <Button
           variant={isActive("/dashboard") ? "default" : "outline"}
           onClick={() => router.push("/dashboard")}
-          className="whitespace-nowrap"
+          className={`whitespace-nowrap transition-all duration-200 ${
+            isActive("/dashboard")
+              ? "bg-[#1886d9] hover:bg-[#0e69bb] shadow-md"
+              : "hover:bg-blue-50 border-slate-300"
+          }`}
         >
           <BarChart3 className="h-4 w-4 md:mr-2" />
           <span className="hidden md:inline">Dashboard</span>
@@ -57,7 +61,11 @@ export function AppNav({ onExport, showExport = false }: AppNavProps) {
         <Button
           variant={isActive("/insights") ? "default" : "outline"}
           onClick={() => router.push("/insights")}
-          className="whitespace-nowrap"
+          className={`whitespace-nowrap transition-all duration-200 ${
+            isActive("/insights")
+              ? "bg-[#1886d9] hover:bg-[#0e69bb] shadow-md"
+              : "hover:bg-blue-50 border-slate-300"
+          }`}
         >
           <Lightbulb className="h-4 w-4 md:mr-2" />
           <span className="hidden md:inline">Insights</span>
@@ -66,27 +74,34 @@ export function AppNav({ onExport, showExport = false }: AppNavProps) {
         <Button
           variant={isActive("/forecasts") ? "default" : "outline"}
           onClick={() => router.push("/forecasts")}
-          className="whitespace-nowrap"
+          className={`whitespace-nowrap transition-all duration-200 ${
+            isActive("/forecasts")
+              ? "bg-[#1886d9] hover:bg-[#0e69bb] shadow-md"
+              : "hover:bg-blue-50 border-slate-300"
+          }`}
         >
           <TrendingUp className="h-4 w-4 md:mr-2" />
           <span className="hidden md:inline">Forecasts</span>
         </Button>
 
         {/* Divider */}
-        <div className="border-l border-border mx-1 hidden sm:block" />
+        <div className="border-l border-slate-300 mx-1 hidden sm:block" />
 
         {/* Actions */}
         <Button
           variant="outline"
           onClick={() => router.push("/import")}
-          className="whitespace-nowrap"
+          className="whitespace-nowrap transition-all duration-200 hover:bg-slate-50 border-slate-300"
         >
           <Upload className="h-4 w-4 md:mr-2" />
           <span className="hidden md:inline">Import Data</span>
         </Button>
 
         {showExport && onExport && (
-          <Button onClick={onExport} className="whitespace-nowrap">
+          <Button
+            onClick={onExport}
+            className="whitespace-nowrap bg-[#e6aa0f] hover:bg-[#c98109] text-white shadow-md transition-all duration-200"
+          >
             <Download className="h-4 w-4 md:mr-2" />
             <span className="hidden sm:inline">Export Summary</span>
             <span className="sm:hidden">Export</span>

@@ -5,7 +5,7 @@
 @layer base {
   :root {
     /* Base - Jerusalem Stone background, Star Blue foreground */
-    --background: 45 50% 97%; /* #fcf9f1 jerusalem-stone-50 */
+    --background: 220 40% 98%; /* Modern light gray-blue */
     --foreground: 210 69% 16%; /* #0e2546 star-blue-950 */
 
     --card: 0 0% 100%;
@@ -23,8 +23,8 @@
     --secondary-foreground: 44 68% 13%; /* menorah-gold-950 */
 
     /* Muted - Jerusalem Stone */
-    --muted: 45 40% 90%; /* jerusalem-stone-100 */
-    --muted-foreground: 28 42% 32%; /* jerusalem-stone-800 */
+    --muted: 220 30% 96%; /* Modern subtle gray */
+    --muted-foreground: 215 16% 46%; /* Modern muted text */
 
     /* Accent - Olive Green */
     --accent: 68 68% 40%; /* #96a724 olive-green-500 */
@@ -34,10 +34,10 @@
     --destructive-foreground: 210 40% 98%;
 
     /* Borders - Light Jerusalem Stone */
-    --border: 43 40% 85%; /* jerusalem-stone-200 */
-    --input: 43 40% 85%;
+    --border: 220 20% 90%; /* Modern subtle border */
+    --input: 220 20% 90%;
     --ring: 205 84% 46%;
-    --radius: 0.5rem;
+    --radius: 0.75rem; /* More modern radius */
 
     /* Chart colors using the palette */
     --chart-1: 205 84% 46%; /* star-blue-500 */
@@ -82,5 +82,33 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  /* Modern glassmorphic card style */
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-sm border border-gray-200/50 shadow-sm hover:shadow-md transition-all duration-300;
+  }
+
+  /* Subtle gradient backgrounds */
+  .gradient-bg {
+    background: linear-gradient(135deg, rgba(24, 134, 217, 0.03) 0%, rgba(230, 170, 15, 0.02) 100%);
+  }
+
+  /* Modern card shadow */
+  .card-shadow {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .card-shadow-hover {
+    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.06), 0 2px 4px 0 rgba(0, 0, 0, 0.04);
+  }
+
+  /* Smooth transitions */
+  .transition-smooth {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }

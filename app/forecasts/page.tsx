@@ -241,16 +241,16 @@ export default function ForecastsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] to-[#e0eefb] p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-5 md:space-y-6">
         <AppNav />
 
         {/* Warning Banner */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="bg-gradient-to-r from-yellow-50/90 to-amber-50/70 border border-yellow-200/60 rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
             <div className="text-sm">
-              <strong className="text-yellow-900">Note:</strong>{" "}
+              <strong className="text-yellow-900 font-semibold">Note:</strong>{" "}
               <span className="text-yellow-800">
                 These are statistical projections based on historical patterns. Actual results will vary based on
                 outreach, engagement, and external factors.
@@ -260,10 +260,10 @@ export default function ForecastsPage() {
         </div>
 
         {/* Next Year Revenue Projection */}
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+            <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-[#1886d9]" />
               Next Year Revenue Projection (FY27)
             </CardTitle>
             <CardDescription>
@@ -308,12 +308,12 @@ export default function ForecastsPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
           {/* Retention Forecast */}
-          <Card>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardHeader>
-              <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-                <Users className="h-5 w-5" />
+              <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+                <Users className="h-5 w-5 text-[#1886d9]" />
                 Retention Forecast
               </CardTitle>
               <CardDescription>
@@ -362,10 +362,10 @@ export default function ForecastsPage() {
           </Card>
 
           {/* Revenue at Risk */}
-          <Card>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardHeader>
-              <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
+              <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-600" />
                 Revenue at Risk Analysis
               </CardTitle>
               <CardDescription>
@@ -413,10 +413,10 @@ export default function ForecastsPage() {
         </div>
 
         {/* Upgrade Trend Impact */}
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+            <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
               If Upgrade Trend Continues
             </CardTitle>
             <CardDescription>
@@ -457,12 +457,12 @@ export default function ForecastsPage() {
         </Card>
 
         {/* Visualizations */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
           {/* Scatter Plot with Regression */}
-          <Card>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardHeader>
-              <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-                <LineChart className="h-5 w-5" />
+              <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+                <LineChart className="h-5 w-5 text-[#1886d9]" />
                 Prior vs. Current Pledge (Renewed Only)
               </CardTitle>
               <CardDescription>
@@ -516,10 +516,10 @@ export default function ForecastsPage() {
           </Card>
 
           {/* Growth Trajectory */}
-          <Card>
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardHeader>
-              <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+              <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-green-600" />
                 Revenue Growth Trajectory
               </CardTitle>
               <CardDescription>
@@ -592,10 +592,10 @@ export default function ForecastsPage() {
         </div>
 
         {/* Action Items */}
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-              <Target className="h-5 w-5" />
+            <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+              <Target className="h-5 w-5 text-[#1886d9]" />
               Strategic Implications
             </CardTitle>
           </CardHeader>
