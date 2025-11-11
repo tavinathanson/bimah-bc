@@ -22,6 +22,7 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import numeral from "numeral";
 import { AppNav } from "@/components/ui/AppNav";
+import { PublishModal } from "@/components/PublishModal";
 import { STATUS_DISPLAY_NAMES, STATUS_DISPLAY_NAMES_SHORT, DISPLAY_NAME_TO_STATUS, type StatusValue } from "@/lib/constants/statusDisplayNames";
 import { GeoToggle } from "@/components/dashboard/GeoToggle";
 import type { Coordinates } from "@/lib/geo/geocoding";
@@ -89,6 +90,9 @@ export default function DashboardPage() {
   const [minAge, setMinAge] = useState<string>("");
   const [maxAge, setMaxAge] = useState<string>("");
   const [showDefinitions, setShowDefinitions] = useState(false);
+
+  // Publish modal state
+  const [showPublishModal, setShowPublishModal] = useState(false);
 
   // Geographic state
   const hasZips = hasZipCodeData(data);
@@ -517,6 +521,10 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handlePublish = () => {
+    setShowPublishModal(true);
+  };
+
   // Filter chart data to only show selected options when filters are active
   const statusChartData = statusMetrics
     .filter((s) => filterStatus.length === 0 || filterStatus.includes(s.status))
@@ -747,7 +755,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-5 md:space-y-6">
-        <AppNav onExport={handleExportExcel} showExport={true} />
+        <AppNav onExport={handleExportExcel} showExport={true} onPublish={handlePublish} showPublish={true} />
 
         <Card className="border-0 shadow-lg shadow-blue-100/50 bg-white/70 backdrop-blur-sm">
           <CardContent className="p-4 md:p-6 space-y-4">
@@ -1863,6 +1871,13 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {/* Publish Modal */}
+      <PublishModal
+        isOpen={showPublishModal}
+        onClose={() => setShowPublishModal(false)}
+        data={data}
+      />
     </div>
   );
 }

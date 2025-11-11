@@ -1,0 +1,14 @@
+# Bimah BC - Robots.txt
+# Prevent search engines from indexing published reports
+
+# Allow indexing of public pages
+User-agent: *
+Allow: /
+Allow: /import
+Allow: /enter
+
+# Block published report pages (contain sensitive financial data)
+Disallow: /view/
+
+# Site configuration
+Sitemap: https://bethchaim.bimah.org/sitemap.xml

@@ -3,14 +3,16 @@
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { BimahLogoWithText } from "@/components/ui/BimahLogoWithText";
-import { BarChart3, Lightbulb, TrendingUp, Upload, Download } from "lucide-react";
+import { BarChart3, Lightbulb, TrendingUp, Upload, Download, Share2 } from "lucide-react";
 
 interface AppNavProps {
   onExport?: () => void;
   showExport?: boolean;
+  onPublish?: () => void;
+  showPublish?: boolean;
 }
 
-export function AppNav({ onExport, showExport = false }: AppNavProps) {
+export function AppNav({ onExport, showExport = false, onPublish, showPublish = false }: AppNavProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -105,6 +107,17 @@ export function AppNav({ onExport, showExport = false }: AppNavProps) {
             <Download className="h-4 w-4 md:mr-2" />
             <span className="hidden sm:inline">Export Summary</span>
             <span className="sm:hidden">Export</span>
+          </Button>
+        )}
+
+        {showPublish && onPublish && (
+          <Button
+            onClick={onPublish}
+            className="whitespace-nowrap rounded-lg bg-[#1886d9] hover:bg-[#0e69bb] text-white shadow-sm transition-all duration-200"
+          >
+            <Share2 className="h-4 w-4 md:mr-2" />
+            <span className="hidden sm:inline">Publish Report</span>
+            <span className="sm:hidden">Publish</span>
           </Button>
         )}
       </div>
