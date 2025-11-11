@@ -136,24 +136,23 @@ Ensure your code is pushed to a GitHub repository.
 
 Click "Deploy" and wait for the build to complete. Environment variables are automatically configured by Vercel when you create the database.
 
-### 5. Configure Custom Domain (bethchaim.bimah.org)
+### 5. Configure Custom Domain (Optional)
 
 #### In Vercel:
 1. Go to your project settings → Domains
-2. Add domain: `bethchaim.bimah.org`
+2. Add your custom domain (e.g., `analytics.yoursynagogue.org`)
 3. Vercel will provide DNS records to configure
 
-#### In Namecheap:
-1. Log in to Namecheap
-2. Go to Domain List → bimah.org → Manage
-3. Navigate to "Advanced DNS"
-4. Add a CNAME record:
+#### In Your DNS Provider:
+1. Log in to your domain registrar (Namecheap, GoDaddy, etc.)
+2. Navigate to DNS settings for your domain
+3. Add a CNAME record:
    - **Type**: CNAME Record
-   - **Host**: bethchaim
+   - **Host**: your subdomain (e.g., `analytics`)
    - **Value**: `cname.vercel-dns.com.` (or the value Vercel provides)
    - **TTL**: Automatic
 
-5. Wait for DNS propagation (can take up to 48 hours, usually much faster)
+4. Wait for DNS propagation (can take up to 48 hours, usually much faster)
 
 Vercel will automatically provision an SSL certificate for your custom domain.
 
@@ -161,7 +160,7 @@ Vercel will automatically provision an SSL certificate for your custom domain.
 
 ### 1. Access the App
 
-Simply visit https://bethchaim.bimah.org (or your Vercel URL). No login required!
+Simply visit your Vercel URL (or custom domain if configured). No login required!
 
 ### 2. Preparing Your Data
 
