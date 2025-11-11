@@ -20,12 +20,15 @@
     "generate-invalid-demo": "tsx scripts/generate-invalid-demo-data.ts 2>/dev/null > demo-invalid.csv && echo 'Invalid demo file generated: demo-invalid.csv'"
   },
   "dependencies": {
+    "@vercel/postgres": "^0.10.0",
+    "better-sqlite3": "^12.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.460.0",
+    "nanoid": "^5.1.6",
     "next": "^16.0.1",
     "numeral": "^2.0.6",
     "react": "^19.0.0",
@@ -40,6 +43,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^22.10.0",
     "@types/numeral": "^2.0.5",

@@ -1,0 +1,14 @@
+# Bimah BC - Robots.txt
+# Prevent search engines from indexing published reports
+
+User-agent: *
+Allow: /
+Allow: /import
+Allow: /enter
+Allow: /dashboard
+Allow: /insights
+Allow: /forecasts
+
+# Note: Published reports use noindex meta tags for privacy
+# Site configuration
+Sitemap: https://bethchaim.bimah.org/sitemap.xml

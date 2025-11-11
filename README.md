@@ -1,6 +1,6 @@
-# Bimah: Beth Chaim - Pledge Analytics
+# Bimah - Analytics for Synagogues
 
-**Bimah** is a Next.js application designed to analyze synagogue pledge data from ShulCloud exports. It provides comprehensive analytics, interactive visualizations, and detailed Excel reports for tracking pledge commitments across fiscal years.
+**Bimah** is a privacy-first analytics platform for synagogues. Upload your data, explore insights with interactive visualizations, export detailed reports, and optionally publish secure dashboards to share with your board.
 
 ## 🎯 Design Philosophy: Extensibility First
 
@@ -8,13 +8,19 @@ This application is designed to work for **any synagogue or religious organizati
 
 ## 🔒 Privacy First
 
-**All data processing happens entirely in your browser.** Your pledge data:
-- ✅ Never leaves your computer
-- ✅ Is never uploaded to any server
-- ✅ Is stored only in your browser's session storage
-- ✅ Disappears when you close the browser tab
+**Two modes of operation:**
 
-Everything runs client-side using JavaScript in your browser. No server interaction is required.
+**1. Local Analysis (Default)**: All data processing happens entirely in your browser:
+- ✅ Data never leaves your computer
+- ✅ Stored only in browser session storage
+- ✅ Automatically deleted when you close the tab
+- ✅ No server interaction required
+
+**2. Publish & Share (Optional)**: Securely share anonymous reports:
+- ✅ Only minimal data uploaded (age, pledge amounts, ZIP codes)
+- ✅ **Never** uploads names or personal information
+- ✅ Unguessable URLs (128-bit security)
+- ✅ Blocked from search engines
 
 ## Features
 
@@ -35,6 +41,11 @@ Everything runs client-side using JavaScript in your browser. No server interact
 - **Export Capabilities**:
   - Multi-sheet Excel workbook with formatted metrics
   - CSV export of normalized data
+- **Publish & Share** (optional):
+  - Securely publish reports with unguessable URLs
+  - Share interactive dashboards with board members
+  - Anonymous data only (no names or personal info)
+  - Point-in-time snapshots with clear dates
 - **Accessibility**: Keyboard navigation, high contrast, readable typography
 - **Mobile Responsive**: Works on desktop, tablet, and mobile devices
 
@@ -46,6 +57,7 @@ Everything runs client-side using JavaScript in your browser. No server interact
 - **Data Processing**: SheetJS (xlsx) for parsing, ExcelJS for export - **all client-side**
 - **Charts**: Recharts
 - **Maps**: Leaflet + react-leaflet for geographic visualizations
+- **Database**: Vercel Postgres (optional, for published reports only)
 - **Validation**: Zod
 - **Testing**: Vitest + Testing Library
 
@@ -105,30 +117,42 @@ Ensure your code is pushed to a GitHub repository.
    - **Build Command**: `npm run build` (default)
    - **Output Directory**: `.next` (default)
 
-### 3. Deploy (No Environment Variables Needed)
+### 3. Set Up Database (Optional - for Publish Feature)
 
-Click "Deploy" and wait for the build to complete.
+**To enable report publishing:**
 
-**Note**: Since passcode authentication is disabled, no environment variables are required. The app will work immediately after deployment.
+1. In your Vercel project, go to the **Storage** tab
+2. Click **Create Database** → Select **Postgres**
+3. Choose your region and create the database
+4. Go to the **Query** tab and run the schema:
 
-### 4. Configure Custom Domain (bethchaim.bimah.org)
+```sql
+-- Copy and paste the contents of db/schema.sql
+```
+
+**If you skip this step**: The app works perfectly for local analysis. Publishing will simply be unavailable.
+
+### 4. Deploy
+
+Click "Deploy" and wait for the build to complete. Environment variables are automatically configured by Vercel when you create the database.
+
+### 5. Configure Custom Domain (Optional)
 
 #### In Vercel:
 1. Go to your project settings → Domains
-2. Add domain: `bethchaim.bimah.org`
+2. Add your custom domain (e.g., `analytics.yoursynagogue.org`)
 3. Vercel will provide DNS records to configure
 
-#### In Namecheap:
-1. Log in to Namecheap
-2. Go to Domain List → bimah.org → Manage
-3. Navigate to "Advanced DNS"
-4. Add a CNAME record:
+#### In Your DNS Provider:
+1. Log in to your domain registrar (Namecheap, GoDaddy, etc.)
+2. Navigate to DNS settings for your domain
+3. Add a CNAME record:
    - **Type**: CNAME Record
-   - **Host**: bethchaim
+   - **Host**: your subdomain (e.g., `analytics`)
    - **Value**: `cname.vercel-dns.com.` (or the value Vercel provides)
    - **TTL**: Automatic
 
-5. Wait for DNS propagation (can take up to 48 hours, usually much faster)
+4. Wait for DNS propagation (can take up to 48 hours, usually much faster)
 
 Vercel will automatically provision an SSL certificate for your custom domain.
 
@@ -136,7 +160,7 @@ Vercel will automatically provision an SSL certificate for your custom domain.
 
 ### 1. Access the App
 
-Simply visit https://bethchaim.bimah.org (or your Vercel URL). No login required!
+Simply visit your Vercel URL (or custom domain if configured). No login required!
 
 ### 2. Preparing Your Data
 
@@ -189,6 +213,28 @@ The dashboard displays:
 
 **Note**: Individual household data is not included in exports to protect privacy. Only aggregate summary statistics are exported.
 
+### 6. Publish & Share Reports (Optional)
+
+**Share interactive reports with board members:**
+
+1. Click **Publish Report** in the dashboard navigation
+2. Enter a title (e.g., "FY25 Pledge Report")
+3. Review what data will be shared (ages, pledges, ZIP codes only)
+4. Click **Publish Report**
+5. Copy and share the unique URL
+
+**What gets published:**
+- Anonymous pledge data (age, current pledge, prior pledge, ZIP code)
+- Static snapshot as of the publish date
+- **Never includes** names, addresses, or personal information
+
+**Security:**
+- Unguessable 21-character URLs (128-bit security)
+- Blocked from search engines via robots.txt and noindex tags
+- Anyone with the link can view (no password required)
+
+**Note**: Requires Vercel Postgres to be set up (see deployment section).
+
 ## Data Definitions
 
 ### Fiscal Year
@@ -237,8 +283,8 @@ Bins use **[inclusive lower, exclusive upper)** boundaries except the last bin:
 - **No time-based progress tracking**: Requires gift dates, not available in this version
 - **Single snapshot only**: Cannot compare across multiple fiscal years simultaneously
 - **No household deduplication**: Each row is treated independently
-- **In-memory only**: Data is stored in browser sessionStorage; no database persistence
-- **No user roles**: Single passcode for all users
+- **Published reports are read-only**: No ability to edit or update after publishing
+- **No access control on published reports**: Anyone with the URL can view (by design for simplicity)
 
 ## Privacy & Security
 
@@ -262,14 +308,17 @@ Bins use **[inclusive lower, exclusive upper)** boundaries except the last bin:
 
 ### What Gets Sent to the Server
 
-The **only** data sent to the server is:
-- Your passcode (encrypted via HTTPS) during login
-- Standard HTTP headers (user agent, etc.)
+**Local Analysis Mode (Default):**
+- Nothing. All processing happens in your browser.
+
+**When You Publish a Report (Optional):**
+- Anonymous pledge rows (age, pledge amounts, ZIP codes)
+- Report title and snapshot date
 
 The server **never** receives:
-- Your Excel/CSV files
-- Pledge amounts
+- Your original Excel/CSV files
 - Names or identifying information
+- Email addresses or phone numbers
 - Any analytics or usage data
 
 ## Testing & Linting
@@ -369,25 +418,35 @@ This creates `demo-pledges-wide.csv` with 500 sample households distributed acro
 ```
 bimah-bc/
 ├── app/                    # Next.js App Router pages
+│   ├── api/               # API routes
+│   │   ├── publish/      # Publish report endpoint
+│   │   └── reports/      # Fetch published reports
 │   ├── enter/             # Authentication page
 │   ├── import/            # File upload and mapping
 │   ├── dashboard/         # Main analytics dashboard
 │   ├── insights/          # Advanced metrics
 │   ├── forecasts/         # Statistical projections
+│   ├── view/              # View published reports
 │   └── geo/               # Geographic analysis (optional)
 ├── components/            # React components
 │   ├── ui/               # shadcn/ui components
-│   └── geo/              # Geography-specific components
+│   ├── geo/              # Geography-specific components
+│   └── PublishModal.tsx  # Publish report modal
 ├── lib/                  # Core business logic
 │   ├── parsing/          # File parsing (SheetJS - client-side)
 │   ├── math/             # Metrics calculations (client-side)
 │   ├── geo/              # Geocoding & aggregation (client-side)
 │   ├── export/           # Excel export (ExcelJS - client-side)
-│   └── schema/           # Zod schemas and types
+│   ├── schema/           # Zod schemas and types
+│   ├── db.ts             # Database client
+│   └── generateReportId.ts  # Secure ID generation
+├── db/                   # Database files
+│   └── schema.sql        # PostgreSQL schema
 ├── tests/                # Test files
 │   └── geo/             # Geography feature tests
 ├── public/               # Static assets
-│   └── leaflet/         # Map marker icons
+│   ├── leaflet/         # Map marker icons
+│   └── robots.txt       # Search engine directives
 └── middleware.ts         # Authentication middleware
 ```
 
@@ -397,8 +456,9 @@ Ideas for future versions:
 
 - Multi-year trend analysis with gift dates
 - Household deduplication and canonical IDs
-- Server-side persistence (optional, with encryption)
-- User roles and audit logs
+- Access control for published reports (passcode or email-based authentication)
+- Report expiration dates and deletion
+- User dashboard to manage published reports
 - Advanced filtering and custom cohort definitions
 - Automated email reports
 - Integration with ShulCloud API

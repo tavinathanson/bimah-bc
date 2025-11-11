@@ -48,7 +48,7 @@ export default function EnterPage() {
             className="mb-2"
           />
           <CardDescription className="mt-4">
-            Pledge Analytics Dashboard
+            Analytics Dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>

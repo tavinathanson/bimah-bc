@@ -9,7 +9,12 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-plus-jakarta)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        space: ['var(--font-space-grotesk)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
       colors: {
+        canvas: '#FFFCEE',
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
