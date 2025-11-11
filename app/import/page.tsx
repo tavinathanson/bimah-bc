@@ -152,6 +152,7 @@ export default function UploadPage() {
             </svg>
             <div className="text-xs md:text-sm text-green-900">
               <strong className="font-semibold">Your data stays private:</strong> Files are processed entirely in your browser and never sent to any server.
+              When you publish a dashboard (optional), only anonymized data is shared—no names or personal information.
             </div>
           </div>
         </div>

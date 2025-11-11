@@ -10,14 +10,59 @@ interface AppNavProps {
   showExport?: boolean;
   onPublish?: () => void;
   showPublish?: boolean;
+  isPublishedView?: boolean;
+  publishedTitle?: string;
+  publishedDate?: string;
 }
 
-export function AppNav({ onExport, showExport = false, onPublish, showPublish = false }: AppNavProps) {
+export function AppNav({ onExport, showExport = false, onPublish, showPublish = false, isPublishedView = false, publishedTitle, publishedDate }: AppNavProps) {
   const router = useRouter();
   const pathname = usePathname();
 
   const isActive = (path: string) => pathname === path;
 
+  // Published view: Show simplified nav with just title and export
+  if (isPublishedView) {
+    return (
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white border border-slate-200 rounded-lg p-4 md:p-5 shadow-sm">
+        <div className="flex items-center gap-3 md:gap-4 flex-shrink min-w-0 overflow-hidden">
+          <button
+            onClick={() => router.push("/")}
+            className="hover:opacity-70 transition-opacity duration-200 flex-shrink-0"
+            title="Go to home"
+          >
+            <BimahLogoWithText
+              logoSize={24}
+              textClassName="font-mono text-xl md:text-2xl tracking-tight text-[#1886d9]"
+            />
+          </button>
+          <div className="border-l border-slate-200 pl-3 md:pl-4 min-w-0 overflow-hidden">
+            <h1 className="text-base md:text-xl font-bold text-slate-800 truncate">
+              {publishedTitle || "Published Dashboard"}
+            </h1>
+            <p className="text-muted-foreground text-xs md:text-sm mt-0.5 truncate">
+              {publishedDate ? `Snapshot: ${publishedDate}` : "Read-only view"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          {showExport && onExport && (
+            <Button
+              onClick={onExport}
+              className="whitespace-nowrap rounded-lg bg-[#e6aa0f] hover:bg-[#c98109] text-white shadow-sm transition-all duration-200"
+            >
+              <Download className="h-4 w-4 md:mr-2" />
+              <span className="hidden sm:inline">Export Summary</span>
+              <span className="sm:hidden">Export</span>
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Regular view: Show full navigation
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white border border-slate-200 rounded-lg p-4 md:p-5 shadow-sm">
       <div className="flex items-center gap-3 md:gap-4 flex-shrink min-w-0 overflow-hidden">
@@ -116,7 +161,7 @@ export function AppNav({ onExport, showExport = false, onPublish, showPublish = 
             className="whitespace-nowrap rounded-lg bg-[#1886d9] hover:bg-[#0e69bb] text-white shadow-sm transition-all duration-200"
           >
             <Share2 className="h-4 w-4 md:mr-2" />
-            <span className="hidden sm:inline">Publish Report</span>
+            <span className="hidden sm:inline">Publish Dashboard</span>
             <span className="sm:hidden">Publish</span>
           </Button>
         )}

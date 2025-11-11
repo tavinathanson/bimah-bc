@@ -59,7 +59,7 @@ export async function GET(
     `;
 
     // Map database rows to RawRow format
-    const rows: RawRow[] = rowsResult.rows.map((row) => ({
+    const rows: RawRow[] = rowsResult.rows.map((row: any) => ({
       age: Number(row.age),
       pledgeCurrent: Number(row.pledge_current),
       pledgePrior: Number(row.pledge_prior),

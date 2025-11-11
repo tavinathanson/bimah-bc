@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { X, Lock, Upload, Check, Copy, ExternalLink, Loader2 } from "lucide-react";
+import { X, Lock, Upload, Check, Copy, ExternalLink, Loader2, Globe, Shield, AlertCircle } from "lucide-react";
 import type { RawRow } from "@/lib/schema/types";
 
 interface PublishModalProps {
@@ -15,6 +15,7 @@ interface PublishModalProps {
 
 export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
   const [title, setTitle] = useState("");
+  const [titleError, setTitleError] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
   const [published, setPublished] = useState(false);
   const [reportUrl, setReportUrl] = useState("");
@@ -23,10 +24,12 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
   if (!isOpen) return null;
 
   const handlePublish = async () => {
+    // Validate title
     if (!title.trim()) {
-      alert("Please enter a title for your report");
+      setTitleError("Please enter a title for your dashboard");
       return;
     }
+    setTitleError("");
 
     setIsPublishing(true);
 
@@ -42,7 +45,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to publish report");
+        throw new Error("Failed to publish dashboard");
       }
 
       const result = await response.json();
@@ -50,7 +53,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
       setPublished(true);
     } catch (error) {
       console.error("Publishing error:", error);
-      alert("Failed to publish report. Please try again.");
+      alert("Failed to publish dashboard. Please try again.");
     } finally {
       setIsPublishing(false);
     }
@@ -64,10 +67,16 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
 
   const handleClose = () => {
     setTitle("");
+    setTitleError("");
     setPublished(false);
     setReportUrl("");
     setCopied(false);
     onClose();
+  };
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value);
+    if (titleError) setTitleError(""); // Clear error when user starts typing
   };
 
   return (
@@ -77,7 +86,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">
-              {published ? "Report Published!" : "Publish Report"}
+              {published ? "Dashboard Published!" : "Publish Dashboard"}
             </h2>
             <button
               onClick={handleClose}
@@ -89,71 +98,98 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
 
           {!published ? (
             <>
-              {/* Privacy Notice */}
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              {/* Who Can Access - Like Google Drive */}
+              <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <div className="flex items-start gap-3">
-                  <Lock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-gray-700">
-                    <p className="font-semibold mb-2">What gets shared when you publish?</p>
-
-                    <div className="space-y-2">
-                      <div>
-                        <p className="font-medium text-green-700">✓ SHARED:</p>
-                        <ul className="list-disc list-inside ml-2 text-gray-600">
-                          <li>Pledge amounts ($1,800, $3,600, etc.)</li>
-                          <li>Age groups (45-year-old, 62-year-old, etc.)</li>
-                          <li>ZIP codes (if you included them)</li>
-                        </ul>
-                      </div>
-
-                      <div>
-                        <p className="font-medium text-red-700">✗ NEVER SHARED:</p>
-                        <ul className="list-disc list-inside ml-2 text-gray-600">
-                          <li>Names</li>
-                          <li>Full addresses</li>
-                          <li>Any other personal information</li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    <p className="mt-3 text-gray-700">
-                      Your published report will only show anonymous data needed for charts and statistics.
-                      Individual donors cannot be identified from this data.
+                  <Globe className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900 mb-1">Anyone with the link</p>
+                    <p className="text-sm text-gray-600">
+                      Anyone who has the link will be able to view this dashboard. No password or login required.
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Report Details */}
-              <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Report Title
-                  </label>
-                  <Input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g., FY25 Pledge Report"
-                    className="w-full"
-                    maxLength={200}
-                    disabled={isPublishing}
-                  />
-                </div>
+              {/* Dashboard Title */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Dashboard Title <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="text"
+                  value={title}
+                  onChange={handleTitleChange}
+                  placeholder="e.g., FY25 Pledge Dashboard"
+                  className={`w-full ${titleError ? "border-red-500" : ""}`}
+                  maxLength={200}
+                  disabled={isPublishing}
+                />
+                {titleError && (
+                  <div className="flex items-center gap-1 mt-2 text-red-600 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{titleError}</span>
+                  </div>
+                )}
+              </div>
 
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">
-                    <strong>Snapshot Date:</strong> {new Date().toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-2">
-                    <strong>Total Households:</strong> {data.length}
-                  </p>
+              {/* Snapshot Info */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  <strong>Snapshot Date:</strong> {new Date().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  <strong>Total Households:</strong> {data.length}
+                </p>
+              </div>
+
+              {/* URL Example */}
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Shield className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-gray-700">
+                    <p className="font-semibold mb-2">Your shareable link will look like:</p>
+                    <p className="font-mono text-xs bg-white px-3 py-2 rounded border border-gray-200 mb-3">
+                      bethchaim.bimah.org/<span className="text-blue-600">xK9mP2qR8tBvN5hZ7wLcJ</span>
+                    </p>
+                    <ul className="space-y-1 text-gray-600">
+                      <li>✓ <strong>Secure:</strong> Impossible to guess (21 random characters)</li>
+                      <li>✓ <strong>Private:</strong> Not listed in search engines like Google</li>
+                      <li>✓ <strong>Anonymous data only:</strong> No names or personal info</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
+
+              {/* What Gets Shared - Collapsed by default */}
+              <details className="mb-6">
+                <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  What data gets uploaded?
+                </summary>
+                <div className="mt-3 ml-6 text-sm text-gray-600 space-y-2">
+                  <div>
+                    <p className="font-medium text-green-700">✓ SHARED:</p>
+                    <ul className="list-disc list-inside ml-2">
+                      <li>Pledge amounts ($1,800, $3,600, etc.)</li>
+                      <li>Age groups (45, 62, etc.)</li>
+                      <li>ZIP codes (if you included them)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-medium text-red-700">✗ NEVER SHARED:</p>
+                    <ul className="list-disc list-inside ml-2">
+                      <li>Names</li>
+                      <li>Full addresses</li>
+                      <li>Email or phone numbers</li>
+                    </ul>
+                  </div>
+                </div>
+              </details>
 
               {/* Actions */}
               <div className="flex gap-3">
@@ -178,7 +214,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2" />
-                      Publish Report
+                      Publish Dashboard
                     </>
                   )}
                 </Button>
@@ -194,53 +230,74 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
                   </div>
                 </div>
 
-                <p className="text-center text-gray-700 mb-6">
-                  Your report has been published successfully! Share this link with your team.
+                <h3 className="text-center text-xl font-semibold text-gray-900 mb-2">
+                  Report Published!
+                </h3>
+                <p className="text-center text-gray-600 mb-6">
+                  Copy the link below and share it with your board members.
                 </p>
 
-                <div className="p-4 bg-gray-50 rounded-lg mb-4">
-                  <p className="text-xs text-gray-600 mb-2">Shareable Link:</p>
+                {/* Link with Copy Button - Prominent */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Shareable Link
+                  </label>
                   <div className="flex gap-2">
                     <Input
                       type="text"
                       value={reportUrl}
                       readOnly
+                      onClick={(e) => e.currentTarget.select()}
                       className="flex-1 font-mono text-sm"
                     />
                     <Button
                       onClick={handleCopyLink}
-                      variant="outline"
-                      size="sm"
+                      className={`whitespace-nowrap ${copied ? "bg-green-600 hover:bg-green-700" : "bg-[#1886d9] hover:bg-[#0e69bb]"}`}
                     >
                       {copied ? (
                         <>
                           <Check className="h-4 w-4 mr-2" />
-                          Copied
+                          Copied!
                         </>
                       ) : (
                         <>
                           <Copy className="h-4 w-4 mr-2" />
-                          Copy
+                          Copy Link
                         </>
                       )}
                     </Button>
                   </div>
                 </div>
 
+                {/* Access Info */}
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-6">
+                  <div className="flex items-start gap-3">
+                    <Globe className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold text-gray-900 mb-1">Anyone with the link can view</p>
+                      <p className="text-sm text-gray-600">
+                        Share this link via email, Slack, or any messaging app. No password needed.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
                 <div className="flex gap-3">
                   <Button
                     onClick={handleClose}
                     variant="outline"
                     className="flex-1"
                   >
-                    Close
+                    Done
                   </Button>
                   <Button
                     onClick={() => window.open(reportUrl, '_blank')}
-                    className="flex-1 bg-[#1886d9] hover:bg-[#0e69bb]"
+                    variant="outline"
+                    className="flex-1"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    View Report
+                    View Dashboard
                   </Button>
                 </div>
               </div>

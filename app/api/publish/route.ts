@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Return success with report URL
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin;
-    const url = `${baseUrl}/view/${reportId}`;
+    const url = `${baseUrl}/${reportId}`;
 
     return NextResponse.json({
       success: true,

@@ -64,10 +64,17 @@ function CustomChartTooltip({ active, payload, label }: any) {
   );
 }
 
-export default function DashboardPage() {
+interface DashboardPageProps {
+  isPublishedView?: boolean;
+}
+
+export default function DashboardPage({ isPublishedView = false }: DashboardPageProps = {}) {
   const [data, setData] = useState<PledgeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // Published dashboard metadata (only used when isPublishedView is true)
+  const [publishedMeta, setPublishedMeta] = useState<{ title: string; snapshotDate: string } | null>(null);
 
   // Filters - now support multiple selections
   const [filterCohort, setFilterCohort] = useState<string[]>([]);
@@ -154,6 +161,15 @@ export default function DashboardPage() {
       const parsed = JSON.parse(stored) as PledgeRow[];
       setData(parsed);
 
+      // Load published dashboard metadata if viewing a published dashboard
+      if (isPublishedView) {
+        const metaStored = sessionStorage.getItem("publishedReportMetadata");
+        if (metaStored) {
+          const meta = JSON.parse(metaStored);
+          setPublishedMeta({ title: meta.title, snapshotDate: meta.snapshotDate });
+        }
+      }
+
       // Restore filter state
       const savedFilters = sessionStorage.getItem("dashboardFilters");
       if (savedFilters) {
@@ -175,7 +191,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, isPublishedView]);
 
   // Save filter state whenever it changes
   useEffect(() => {
@@ -755,7 +771,33 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-5 md:space-y-6">
-        <AppNav onExport={handleExportExcel} showExport={true} onPublish={handlePublish} showPublish={true} />
+        <AppNav
+          onExport={handleExportExcel}
+          showExport={true}
+          onPublish={handlePublish}
+          showPublish={!isPublishedView}
+          isPublishedView={isPublishedView}
+          publishedTitle={publishedMeta?.title}
+          publishedDate={publishedMeta?.snapshotDate ? new Date(publishedMeta.snapshotDate).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }) : undefined}
+        />
+
+        {/* Published Dashboard Info Banner */}
+        {isPublishedView && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-gray-700">
+              <p className="font-medium mb-1">Read-only snapshot view</p>
+              <p className="text-gray-600">
+                All data is anonymized for privacy (no names or personal information).
+                Use the filters below to explore pledge patterns and demographics.
+              </p>
+            </div>
+          </div>
+        )}
 
         <Card className="border-0 shadow-lg shadow-blue-100/50 bg-white/70 backdrop-blur-sm">
           <CardContent className="p-4 md:p-6 space-y-4">

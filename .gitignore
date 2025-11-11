@@ -37,3 +37,7 @@ next-env.d.ts
 
 # vitest
 .vitest
+
+# local sqlite database
+bimah-local.db
+bimah-local.db-journal
