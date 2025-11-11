@@ -1,6 +1,6 @@
-# Bimah: Beth Chaim - Pledge Analytics
+# Bimah - Analytics for Synagogues
 
-**Bimah** is a Next.js application designed to analyze synagogue pledge data from ShulCloud exports. It provides comprehensive analytics, interactive visualizations, detailed Excel reports, and optional secure report publishing for tracking pledge commitments across fiscal years.
+**Bimah** is a privacy-first analytics platform for synagogues. Upload your data, explore insights with interactive visualizations, export detailed reports, and optionally publish secure dashboards to share with your board.
 
 ## 🎯 Design Philosophy: Extensibility First
 
