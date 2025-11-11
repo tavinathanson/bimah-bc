@@ -49,19 +49,17 @@ export default function HomePage() {
             </div>
 
             {/* Tagline */}
-            <div className="max-w-3xl mx-auto mb-12 mt-10">
-              <h2 className="font-space text-3xl md:text-4xl font-semibold text-[#0F2C73] mb-6">
+            <div className="max-w-4xl mx-auto mb-16 mt-10">
+              <h2 className="font-space text-4xl md:text-5xl font-semibold text-[#0F2C73] mb-8 leading-tight">
                 Analytics for Synagogues
               </h2>
-              <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-3">
-                Understand your community better with privacy-first analytics.
-              </p>
-              <p className="text-base text-gray-500 mb-8">
-                Upload your data, explore insights, and share interactive dashboards with your board.
+
+              <p className="text-xl md:text-2xl text-gray-700 leading-relaxed mb-10 max-w-2xl mx-auto">
+                Upload your data. Explore insights. Share dashboards.
               </p>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
                 <Button
                   onClick={() => router.push("/import")}
                   size="lg"
@@ -74,7 +72,7 @@ export default function HomePage() {
                   onClick={handleLaunchDemo}
                   size="lg"
                   variant="outline"
-                  className="w-full sm:w-auto border-2 border-[#3C78FF] text-[#3C78FF] hover:bg-blue-50 text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all"
+                  className="w-full sm:w-auto border-2 border-[#3C78FF] text-[#3C78FF] hover:bg-[#3C78FF] hover:text-white text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all"
                 >
                   <Sparkles className="h-5 w-5 mr-2" />
                   Launch Demo Dashboard
@@ -82,7 +80,7 @@ export default function HomePage() {
                 </Button>
               </div>
 
-              <p className="text-sm text-gray-500 mt-4">
+              <p className="text-sm text-gray-500">
                 No signup • Instant access • Works in your browser
               </p>
             </div>

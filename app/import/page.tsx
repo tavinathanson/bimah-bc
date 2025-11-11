@@ -138,7 +138,7 @@ export default function UploadPage() {
             />
           </button>
           <div className="border-l border-border pl-3 md:pl-4">
-            <h1 className="text-xl md:text-2xl font-bold">Import Pledge Data</h1>
+            <h1 className="text-xl md:text-2xl font-bold">Import Your Data</h1>
             <p className="text-muted-foreground text-xs md:text-sm mt-0.5">
               Load XLSX or CSV files
             </p>
