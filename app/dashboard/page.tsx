@@ -1256,7 +1256,7 @@ export default function DashboardPage() {
         </Card>
 
         {hasActiveFilters && (
-          <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/70 backdrop-blur-sm border border-blue-200/60 rounded-xl p-3 md:p-4 shadow-sm">
+          <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/70 border border-blue-200/60 rounded-xl p-3 md:p-4 shadow-sm">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-blue-600 flex-shrink-0" />
               <div className="text-xs md:text-sm text-blue-900">
@@ -1308,9 +1308,8 @@ export default function DashboardPage() {
             </CardHeader>
           </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative">
-            <div className={`absolute inset-0 opacity-5 ${totals.deltaDollar >= 0 ? "bg-green-500" : "bg-red-500"}`} />
-            <CardHeader className="py-5 md:py-6 relative">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardHeader className="py-5 md:py-6">
               <CardDescription className="text-xs md:text-sm mb-2 font-medium text-slate-600">Change from Prior Year</CardDescription>
               <CardTitle className={`text-2xl md:text-3xl flex items-center gap-2 font-bold ${totals.deltaDollar >= 0 ? "text-green-600" : "text-red-600"}`}>
                 <span className="text-2xl">{totals.deltaDollar >= 0 ? "↑" : "↓"}</span>
