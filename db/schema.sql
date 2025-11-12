@@ -7,7 +7,10 @@ CREATE TABLE published_reports (
   report_id TEXT UNIQUE NOT NULL,  -- e.g. 'xK9mP2qR8tBvN5hZ7wLcJ'
   title TEXT NOT NULL,              -- e.g. 'FY25 Pledge Report'
   snapshot_date DATE NOT NULL,      -- Date data was captured
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT NOW(),
+  synagogue_address TEXT,           -- Optional: Address for geographic analysis
+  synagogue_lat NUMERIC(10,7),      -- Optional: Latitude for geographic center
+  synagogue_lng NUMERIC(10,7)       -- Optional: Longitude for geographic center
 );
 
 -- Anonymous pledge rows

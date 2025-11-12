@@ -34,6 +34,18 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
     setIsPublishing(true);
 
     try {
+      // Get synagogue location from localStorage if it exists
+      const synagogueAddress = localStorage.getItem("bimah_bc_synagogue_address");
+      const synagogueCoordsStr = localStorage.getItem("bimah_bc_synagogue_coords");
+      let synagogueCoords = null;
+      if (synagogueCoordsStr) {
+        try {
+          synagogueCoords = JSON.parse(synagogueCoordsStr);
+        } catch (e) {
+          console.error("Failed to parse synagogue coords:", e);
+        }
+      }
+
       const response = await fetch("/api/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -41,6 +53,9 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
           title: title.trim(),
           snapshotDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD
           rows: data,
+          synagogueAddress: synagogueAddress || undefined,
+          synagogueLat: synagogueCoords?.lat || undefined,
+          synagogueLng: synagogueCoords?.lng || undefined,
         }),
       });
 

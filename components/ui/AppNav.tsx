@@ -22,9 +22,10 @@ interface AppNavProps {
   isPublishedView?: boolean;
   publishedTitle?: string;
   publishedDate?: string;
+  hideRecentDashboards?: boolean;
 }
 
-export function AppNav({ onExport, showExport = false, onPublish, showPublish = false, onDelete, isPublishedView = false, publishedTitle, publishedDate }: AppNavProps) {
+export function AppNav({ onExport, showExport = false, onPublish, showPublish = false, onDelete, isPublishedView = false, publishedTitle, publishedDate, hideRecentDashboards = false }: AppNavProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [recentDropdownOpen, setRecentDropdownOpen] = useState(false);
@@ -76,7 +77,7 @@ export function AppNav({ onExport, showExport = false, onPublish, showPublish = 
           {/* Right side: Actions */}
           <div className="flex gap-2 flex-wrap">
             {/* Recently Published Dropdown */}
-            {recentDashboards.length > 0 && (
+            {!hideRecentDashboards && recentDashboards.length > 0 && (
               <div className="relative">
                 <Button
                   onClick={() => setRecentDropdownOpen(!recentDropdownOpen)}
@@ -198,7 +199,7 @@ export function AppNav({ onExport, showExport = false, onPublish, showPublish = 
         {/* Right side: Actions */}
         <div className="flex gap-2 flex-wrap">
           {/* Recently Published Dropdown */}
-          {recentDashboards.length > 0 && (
+          {!hideRecentDashboards && recentDashboards.length > 0 && (
             <div className="relative">
               <Button
                 onClick={() => setRecentDropdownOpen(!recentDropdownOpen)}

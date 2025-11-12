@@ -32,6 +32,15 @@ export function ViewReportClient({ report }: ViewReportClientProps) {
       isPublished: true,
     }));
 
+    // Store synagogue location if present in the published report
+    if (report.synagogueAddress && report.synagogueLat !== undefined && report.synagogueLng !== undefined) {
+      localStorage.setItem("bimah_bc_synagogue_address", report.synagogueAddress);
+      localStorage.setItem("bimah_bc_synagogue_coords", JSON.stringify({
+        lat: report.synagogueLat,
+        lng: report.synagogueLng,
+      }));
+    }
+
     setReady(true);
   }, [report]);
 

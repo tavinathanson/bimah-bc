@@ -10,7 +10,7 @@ import { getFileHeaders, parseFile, previewFile, guessColumnMapping } from "@/li
 import type { ColumnMapping, ParsedFile } from "@/lib/schema/types";
 import { enrichRows } from "@/lib/math/calculations";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
-import { BimahLogoWithText } from "@/components/ui/BimahLogoWithText";
+import { AppNav } from "@/components/ui/AppNav";
 import { generateDemoData } from "@/lib/demo/generate-demo";
 import { RecentDashboards } from "@/components/RecentDashboards";
 
@@ -125,34 +125,25 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-5 md:space-y-6">
-        <div className="flex items-center gap-3 md:gap-4">
-          <button
-            onClick={() => router.push("/")}
-            className="hover:opacity-80 transition-opacity"
-            title="Go to home"
-          >
-            <BimahLogoWithText
-              logoSize={24}
-              textClassName="font-mono text-xl md:text-2xl tracking-tight text-[#0e2546]"
-            />
-          </button>
-          <div className="border-l border-border pl-3 md:pl-4">
-            <h1 className="text-xl md:text-2xl font-bold">Import Your Data</h1>
-            <p className="text-muted-foreground text-xs md:text-sm mt-0.5">
-              Load XLSX or CSV files
-            </p>
-          </div>
+      <div className="max-w-7xl mx-auto space-y-5 md:space-y-6">
+        <AppNav hideRecentDashboards />
+
+        {/* Page Title */}
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-4 md:p-5">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Import Your Data</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Upload XLSX or CSV files to analyze pledge data
+          </p>
         </div>
 
         {/* Privacy Notice */}
-        <div className="bg-gradient-to-r from-green-50/90 to-emerald-50/70 border border-green-200/60 rounded-xl p-3 md:p-4 shadow-sm">
-          <div className="flex items-center gap-2">
-            <svg className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="bg-gradient-to-r from-green-50/90 to-emerald-50/70 border border-green-200/60 rounded-lg p-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <svg className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
-            <div className="text-xs md:text-sm text-green-900">
-              <strong className="font-semibold">Your data stays private:</strong> Processing happens in your browser. Publish optionally with anonymized data only.
+            <div className="text-sm text-green-900">
+              <strong className="font-semibold">Your data stays private:</strong> All processing happens in your browser. Nothing is uploaded unless you choose to publish with anonymized data only.
             </div>
           </div>
         </div>
@@ -162,21 +153,21 @@ export default function UploadPage() {
 
         {files.length === 0 ? (
           <Card className="border-0 shadow-lg shadow-blue-100/50 bg-white/70 backdrop-blur-sm">
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="p-6 space-y-4">
               <div
                 {...getRootProps()}
-                className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all duration-200 ${
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
                   isDragActive
                     ? "border-blue-500 bg-blue-50/50 shadow-sm"
                     : "border-slate-300 hover:border-blue-400 hover:bg-blue-50/30"
                 }`}
               >
                 <input {...getInputProps()} />
-                <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-lg font-medium mb-2">
+                <Upload className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+                <p className="text-base font-medium mb-1">
                   {isDragActive ? "Drop files here" : "Drag & drop files here"}
                 </p>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-muted-foreground mb-2">
                   or click to browse
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -198,13 +189,13 @@ export default function UploadPage() {
                   onClick={handleDemoData}
                   variant="outline"
                   size="lg"
-                  className="gap-2"
+                  className="gap-2 rounded-lg border-slate-300 hover:bg-slate-50 hover:border-slate-400"
                 >
                   <Sparkles className="h-4 w-4" />
                   Try Demo with Sample Data
                 </Button>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Explore the dashboard with 500 realistic pledge records
+                  Explore with 500 realistic pledge records
                 </p>
               </div>
             </CardContent>
@@ -394,7 +385,7 @@ export default function UploadPage() {
                             </div>
                             {allValidated && (
                               <div className="flex justify-end">
-                                <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto">
+                                <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto bg-[#1886d9] hover:bg-[#0e69bb] text-white rounded-lg">
                                   Continue to Dashboard →
                                 </Button>
                               </div>
@@ -409,7 +400,7 @@ export default function UploadPage() {
                       currentFile.mapping?.pledgePrior &&
                       !currentFile.parsed && (
                         <div className="flex justify-end">
-                          <Button onClick={handleValidate} size="lg" className="w-full sm:w-auto">
+                          <Button onClick={handleValidate} size="lg" className="w-full sm:w-auto bg-[#1886d9] hover:bg-[#0e69bb] text-white rounded-lg">
                             Validate File →
                           </Button>
                         </div>

@@ -30,7 +30,10 @@ const initSchema = () => {
         report_id TEXT UNIQUE NOT NULL,
         title TEXT NOT NULL,
         snapshot_date TEXT NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        synagogue_address TEXT,
+        synagogue_lat REAL,
+        synagogue_lng REAL
       );
 
       CREATE TABLE report_rows (

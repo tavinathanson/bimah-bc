@@ -15,6 +15,9 @@ const PublishRequestSchema = z.object({
     pledgePrior: z.number().nonnegative(),
     zipCode: z.string().optional(),
   })).min(1),
+  synagogueAddress: z.string().optional(),
+  synagogueLat: z.number().optional(),
+  synagogueLng: z.number().optional(),
 });
 
 /**
@@ -27,15 +30,15 @@ export async function POST(request: NextRequest) {
   try {
     // Parse and validate request body
     const body = await request.json();
-    const { title, snapshotDate, rows } = PublishRequestSchema.parse(body);
+    const { title, snapshotDate, rows, synagogueAddress, synagogueLat, synagogueLng } = PublishRequestSchema.parse(body);
 
     // Generate unique report ID
     const reportId = generateReportId();
 
     // Insert report metadata
     await sql`
-      INSERT INTO published_reports (report_id, title, snapshot_date)
-      VALUES (${reportId}, ${title}, ${snapshotDate})
+      INSERT INTO published_reports (report_id, title, snapshot_date, synagogue_address, synagogue_lat, synagogue_lng)
+      VALUES (${reportId}, ${title}, ${snapshotDate}, ${synagogueAddress ?? null}, ${synagogueLat ?? null}, ${synagogueLng ?? null})
     `;
 
     // Bulk insert rows

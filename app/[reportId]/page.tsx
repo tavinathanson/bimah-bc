@@ -27,7 +27,7 @@ async function getReport(reportId: string): Promise<PublishedReport | null> {
 
     // Fetch report metadata
     const reportResult = await sql`
-      SELECT report_id, title, snapshot_date, created_at
+      SELECT report_id, title, snapshot_date, created_at, synagogue_address, synagogue_lat, synagogue_lng
       FROM published_reports
       WHERE report_id = ${reportId}
     `;
@@ -67,6 +67,9 @@ async function getReport(reportId: string): Promise<PublishedReport | null> {
       snapshotDate: report.snapshot_date,
       createdAt: report.created_at,
       rows,
+      ...(report.synagogue_address && { synagogueAddress: report.synagogue_address }),
+      ...(report.synagogue_lat !== null && report.synagogue_lat !== undefined && { synagogueLat: Number(report.synagogue_lat) }),
+      ...(report.synagogue_lng !== null && report.synagogue_lng !== undefined && { synagogueLng: Number(report.synagogue_lng) }),
     };
   } catch (error) {
     console.error('Error fetching report:', error);
