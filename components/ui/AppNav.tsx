@@ -186,7 +186,16 @@ export function AppNav({ onExport, showExport = false, onPublish, showPublish = 
             />
           </button>
 
-          {pathname !== "/import" && (
+          {pathname === "/import" ? (
+            <div className="border-l border-slate-200 pl-3 md:pl-4 min-w-0">
+              <h1 className="text-base md:text-xl font-bold text-slate-800 truncate">
+                Import Your Data
+              </h1>
+              <p className="text-muted-foreground text-xs md:text-sm mt-0.5 truncate">
+                Upload XLSX or CSV files to analyze your data
+              </p>
+            </div>
+          ) : (
             <Button
               variant="ghost"
               onClick={() => router.push("/import")}

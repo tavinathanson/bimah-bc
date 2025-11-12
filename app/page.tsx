@@ -86,6 +86,11 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Recent Dashboards - Above feature cards for visibility */}
+          <div className="mt-16 max-w-5xl mx-auto">
+            <RecentDashboards />
+          </div>
+
           {/* Feature Cards - Angled like old design */}
           <div className="mt-20 max-w-5xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-4">
@@ -130,11 +135,6 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </section>
-
-      {/* Recent Dashboards Section */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <RecentDashboards />
       </section>
     </div>
   );

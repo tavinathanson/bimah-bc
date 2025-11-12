@@ -128,14 +128,6 @@ export default function UploadPage() {
       <div className="max-w-7xl mx-auto space-y-5 md:space-y-6">
         <AppNav hideRecentDashboards />
 
-        {/* Page Title */}
-        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-4 md:p-5">
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Import Your Data</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Upload XLSX or CSV files to analyze your data
-          </p>
-        </div>
-
         {/* Privacy Notice */}
         <div className="bg-gradient-to-r from-green-50/90 to-emerald-50/70 border border-green-200/60 rounded-lg p-4 shadow-sm">
           <div className="flex items-start gap-3">
