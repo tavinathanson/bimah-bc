@@ -165,7 +165,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
                   <div className="text-sm text-gray-700">
                     <p className="font-semibold mb-2">Your shareable link will look like:</p>
                     <p className="font-mono text-xs bg-white px-3 py-2 rounded border border-gray-200 mb-3">
-                      bethchaim.bimah.org/<span className="text-blue-600">xK9mP2qR8tBvN5hZ7wLcJ</span>
+                      {typeof window !== 'undefined' ? window.location.host : 'your-domain.com'}/<span className="text-blue-600">xK9mP2qR8tBvN5hZ7wLcJ</span>
                     </p>
                     <ul className="space-y-1 text-gray-600">
                       <li>✓ <strong>Secure:</strong> Impossible to guess (21 random characters)</li>

@@ -67,6 +67,29 @@ export default function InsightsPage() {
       <div className="max-w-7xl mx-auto space-y-5 md:space-y-6">
         <AppNav />
 
+        {/* Navigation Tabs */}
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-2">
+          <div className="flex gap-1">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-slate-600 hover:bg-slate-100"
+            >
+              Dashboard
+            </button>
+            <button
+              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-[#1886d9] text-white"
+            >
+              Insights
+            </button>
+            <button
+              onClick={() => router.push("/forecasts")}
+              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-slate-600 hover:bg-slate-100"
+            >
+              Forecasts
+            </button>
+          </div>
+        </div>
+
         {/* Key Metrics Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
           <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">

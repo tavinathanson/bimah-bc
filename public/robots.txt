@@ -10,5 +10,3 @@ Allow: /insights
 Allow: /forecasts
 
 # Note: Published reports use noindex meta tags for privacy
-# Site configuration
-Sitemap: https://bethchaim.bimah.org/sitemap.xml

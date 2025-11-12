@@ -245,6 +245,29 @@ export default function ForecastsPage() {
       <div className="max-w-7xl mx-auto space-y-5 md:space-y-6">
         <AppNav />
 
+        {/* Navigation Tabs */}
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-2">
+          <div className="flex gap-1">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-slate-600 hover:bg-slate-100"
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => router.push("/insights")}
+              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-slate-600 hover:bg-slate-100"
+            >
+              Insights
+            </button>
+            <button
+              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-[#1886d9] text-white"
+            >
+              Forecasts
+            </button>
+          </div>
+        </div>
+
         {/* Warning Banner */}
         <div className="bg-gradient-to-r from-yellow-50/90 to-amber-50/70 border border-yellow-200/60 rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2">

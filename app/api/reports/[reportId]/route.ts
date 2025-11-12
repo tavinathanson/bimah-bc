@@ -41,14 +41,17 @@ export async function GET(
       WHERE report_id = ${reportId}
     `;
 
-    if (reportResult.rows.length === 0) {
+    // Handle both postgres (returns array directly) and SQLite (returns {rows, rowCount})
+    const reportRows = Array.isArray(reportResult) ? reportResult : (reportResult as any).rows;
+
+    if (!reportRows || reportRows.length === 0) {
       return NextResponse.json(
         { error: 'Report not found' },
         { status: 404 }
       );
     }
 
-    const report = reportResult.rows[0];
+    const report = reportRows[0];
 
     // Fetch all rows for this report
     const rowsResult = await sql`
@@ -58,8 +61,11 @@ export async function GET(
       ORDER BY id
     `;
 
+    // Handle both postgres and SQLite response formats
+    const dbRows = Array.isArray(rowsResult) ? rowsResult : (rowsResult as any).rows;
+
     // Map database rows to RawRow format
-    const rows: RawRow[] = rowsResult.rows.map((row: any) => ({
+    const rows: RawRow[] = dbRows.map((row: any) => ({
       age: Number(row.age),
       pledgeCurrent: Number(row.pledge_current),
       pledgePrior: Number(row.pledge_prior),
@@ -113,7 +119,10 @@ export async function DELETE(
       WHERE report_id = ${reportId}
     `;
 
-    if (result.rowCount === 0) {
+    // Handle both postgres (returns .count) and SQLite (returns .rowCount)
+    const affectedRows = (result as any).count ?? (result as any).rowCount ?? 0;
+
+    if (affectedRows === 0) {
       return NextResponse.json(
         { error: 'Report not found' },
         { status: 404 }

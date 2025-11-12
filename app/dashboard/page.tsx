@@ -826,22 +826,14 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
                 Dashboard
               </button>
               <button
-                onClick={() => setActiveTab("insights")}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                  activeTab === "insights"
-                    ? "bg-[#1886d9] text-white"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
+                onClick={() => router.push("/insights")}
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-slate-600 hover:bg-slate-100"
               >
                 Insights
               </button>
               <button
-                onClick={() => setActiveTab("forecasts")}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                  activeTab === "forecasts"
-                    ? "bg-[#1886d9] text-white"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
+                onClick={() => router.push("/forecasts")}
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-slate-600 hover:bg-slate-100"
               >
                 Forecasts
               </button>
