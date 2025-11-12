@@ -20,7 +20,6 @@
     "generate-invalid-demo": "tsx scripts/generate-invalid-demo-data.ts 2>/dev/null > demo-invalid.csv && echo 'Invalid demo file generated: demo-invalid.csv'"
   },
   "dependencies": {
-    "@vercel/postgres": "^0.10.0",
     "better-sqlite3": "^12.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -31,6 +30,7 @@
     "nanoid": "^5.1.6",
     "next": "^16.0.1",
     "numeral": "^2.0.6",
+    "postgres": "^3.4.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.5",
