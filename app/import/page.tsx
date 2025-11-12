@@ -132,7 +132,7 @@ export default function UploadPage() {
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-4 md:p-5">
           <h1 className="text-xl md:text-2xl font-bold text-slate-900">Import Your Data</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Upload XLSX or CSV files to analyze pledge data
+            Upload XLSX or CSV files to analyze your data
           </p>
         </div>
 
@@ -195,7 +195,7 @@ export default function UploadPage() {
                   Try Demo with Sample Data
                 </Button>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Explore with 500 realistic pledge records
+                  Explore with 500 realistic sample records
                 </p>
               </div>
             </CardContent>

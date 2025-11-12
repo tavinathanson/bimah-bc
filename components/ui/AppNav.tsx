@@ -186,14 +186,16 @@ export function AppNav({ onExport, showExport = false, onPublish, showPublish = 
             />
           </button>
 
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/import")}
-            className="rounded-lg hover:bg-slate-100 text-slate-700 hover:text-slate-900"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Import Data
-          </Button>
+          {pathname !== "/import" && (
+            <Button
+              variant="ghost"
+              onClick={() => router.push("/import")}
+              className="rounded-lg hover:bg-slate-100 text-slate-700 hover:text-slate-900"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Import Data
+            </Button>
+          )}
         </div>
 
         {/* Right side: Actions */}

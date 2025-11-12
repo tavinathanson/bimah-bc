@@ -37,7 +37,7 @@ export function ViewReportClient({ report }: ViewReportClientProps) {
       localStorage.setItem("bimah_bc_synagogue_address", report.synagogueAddress);
       localStorage.setItem("bimah_bc_synagogue_coords", JSON.stringify({
         lat: report.synagogueLat,
-        lng: report.synagogueLng,
+        lon: report.synagogueLng,  // Note: localStorage uses 'lon' to match Coordinates interface
       }));
     }
 

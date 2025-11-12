@@ -55,7 +55,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
           rows: data,
           synagogueAddress: synagogueAddress || undefined,
           synagogueLat: synagogueCoords?.lat || undefined,
-          synagogueLng: synagogueCoords?.lng || undefined,
+          synagogueLng: synagogueCoords?.lon || undefined,
         }),
       });
 
@@ -146,7 +146,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
                   type="text"
                   value={title}
                   onChange={handleTitleChange}
-                  placeholder="e.g., FY25 Pledge Dashboard"
+                  placeholder="e.g., FY25 Annual Report"
                   className={`w-full ${titleError ? "border-red-500" : ""}`}
                   maxLength={200}
                   disabled={isPublishing}
