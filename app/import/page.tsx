@@ -7,9 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { getFileHeaders, parseFile, previewFile, guessColumnMapping } from "@/lib/parsing/parser";
-import type { ColumnMapping, ParsedFile } from "@/lib/schema/types";
+import { detectFormat, type FormatDetectionResult } from "@/lib/parsing/formatDetection";
+import { parseTransactionFile, aggregateTransactionsToPledgeRows, getTransactionYears, type ParsedTransactions } from "@/lib/parsing/transactionParser";
+import type { ColumnMapping, ParsedFile, Transaction } from "@/lib/schema/types";
 import { enrichRows } from "@/lib/math/calculations";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Sparkles, Database, Calendar } from "lucide-react";
 import { AppNav } from "@/components/ui/AppNav";
 import { generateDemoData } from "@/lib/demo/generate-demo";
 import { RecentDashboards } from "@/components/RecentDashboards";
@@ -21,6 +23,13 @@ interface FileState {
   mapping?: ColumnMapping;
   parsed?: ParsedFile;
   preview?: Record<string, unknown>[];
+  // New fields for format detection
+  formatDetection?: FormatDetectionResult;
+  // Transaction-based data
+  transactionData?: ParsedTransactions;
+  selectedChargeTypes?: string[];
+  selectedCurrentYear?: number;
+  selectedPriorYear?: number;
 }
 
 export default function UploadPage() {
@@ -39,6 +48,27 @@ export default function UploadPage() {
         acceptedFiles.map(async (file) => {
           const headers = await getFileHeaders(file);
           const preview = await previewFile(file, 25);
+          const formatDetection = detectFormat(headers);
+
+          // If ShulCloud format detected, parse as transactions
+          if (formatDetection.format?.id === "shulcloud-transactions") {
+            const transactionData = await parseTransactionFile(file);
+            const years = getTransactionYears(transactionData.transactions);
+
+            return {
+              file,
+              status: "mapping" as const,
+              headers,
+              preview,
+              formatDetection,
+              transactionData,
+              selectedChargeTypes: transactionData.chargeTypes, // Default: all
+              selectedCurrentYear: years[0], // Most recent
+              selectedPriorYear: years[1], // Second most recent
+            };
+          }
+
+          // Legacy format - use existing column guessing
           const guessedMapping = guessColumnMapping(headers);
 
           return {
@@ -46,6 +76,7 @@ export default function UploadPage() {
             status: "mapping" as const,
             headers,
             preview,
+            formatDetection,
             mapping: guessedMapping as ColumnMapping,
           };
         })
@@ -77,11 +108,67 @@ export default function UploadPage() {
     });
   };
 
+  const handleChargeTypeToggle = (chargeType: string) => {
+    if (currentFileIndex === null) return;
+
+    setFiles((prev) => {
+      const updated = [...prev];
+      const current = updated[currentFileIndex];
+      if (!current || !current.selectedChargeTypes) return prev;
+
+      const newSelected = current.selectedChargeTypes.includes(chargeType)
+        ? current.selectedChargeTypes.filter(ct => ct !== chargeType)
+        : [...current.selectedChargeTypes, chargeType];
+
+      updated[currentFileIndex] = {
+        ...current,
+        selectedChargeTypes: newSelected,
+      };
+      return updated;
+    });
+  };
+
+  const handleYearChange = (field: "current" | "prior", value: number) => {
+    if (currentFileIndex === null) return;
+
+    setFiles((prev) => {
+      const updated = [...prev];
+      const current = updated[currentFileIndex];
+      if (!current) return prev;
+
+      updated[currentFileIndex] = {
+        ...current,
+        selectedCurrentYear: field === "current" ? value : current.selectedCurrentYear,
+        selectedPriorYear: field === "prior" ? value : current.selectedPriorYear,
+      };
+      return updated;
+    });
+  };
+
   const handleValidate = async () => {
     if (currentFileIndex === null) return;
 
     const fileState = files[currentFileIndex];
-    if (!fileState || !fileState.mapping) return;
+    if (!fileState) return;
+
+    // For transaction-based files
+    if (fileState.transactionData) {
+      const hasErrors = fileState.transactionData.errors.length > 0;
+      const hasData = fileState.transactionData.transactions.length > 0;
+
+      setFiles((prev) => {
+        const updated = [...prev];
+        updated[currentFileIndex] = {
+          ...fileState,
+          status: hasErrors ? "error" : (hasData ? "validated" : "error"),
+        };
+        return updated;
+      });
+      return;
+    }
+
+    // For legacy format
+    if (!fileState.mapping) return;
 
     const parsed = await parseFile(fileState.file, fileState.mapping);
 
@@ -97,31 +184,82 @@ export default function UploadPage() {
   };
 
   const handleContinue = () => {
-    // Combine all validated files and store in sessionStorage
-    const validatedFiles = files.filter((f) => f.status === "validated" && f.parsed);
+    const validatedFiles = files.filter((f) => f.status === "validated");
 
-    const allRows = validatedFiles.flatMap((f) =>
-      enrichRows(f.file.name, f.parsed!.rows)
-    );
+    // Check if we have transaction data
+    const hasTransactionData = validatedFiles.some(f => f.transactionData);
 
-    sessionStorage.setItem("pledgeData", JSON.stringify(allRows));
+    if (hasTransactionData) {
+      // Store raw transactions for flexible analysis in dashboard
+      const txnFile = validatedFiles.find(f => f.transactionData);
+      if (txnFile?.transactionData) {
+        // Serialize transactions (convert dates to ISO strings)
+        const serializedTransactions = txnFile.transactionData.transactions.map(t => ({
+          ...t,
+          date: t.date.toISOString(),
+          primaryBirthday: t.primaryBirthday?.toISOString(),
+          memberSince: t.memberSince?.toISOString(),
+          joinDate: t.joinDate?.toISOString(),
+        }));
+
+        sessionStorage.setItem("transactionData", JSON.stringify(serializedTransactions));
+        sessionStorage.setItem("dataSourceType", "transactions");
+        sessionStorage.setItem("transactionMetadata", JSON.stringify({
+          chargeTypes: txnFile.transactionData.chargeTypes,
+          years: getTransactionYears(txnFile.transactionData.transactions),
+          dateRange: txnFile.transactionData.dateRange ? {
+            min: txnFile.transactionData.dateRange.min.toISOString(),
+            max: txnFile.transactionData.dateRange.max.toISOString(),
+          } : null,
+        }));
+
+        // Clear legacy data
+        sessionStorage.removeItem("pledgeData");
+      }
+    } else {
+      // Legacy format - aggregate and store as before
+      let allRows: any[] = [];
+      for (const f of validatedFiles) {
+        if (f.parsed) {
+          const enriched = enrichRows(f.file.name, f.parsed.rows);
+          allRows = allRows.concat(enriched);
+        }
+      }
+
+      sessionStorage.setItem("pledgeData", JSON.stringify(allRows));
+      sessionStorage.setItem("dataSourceType", "legacy-pledges");
+
+      // Clear transaction data
+      sessionStorage.removeItem("transactionData");
+      sessionStorage.removeItem("transactionMetadata");
+    }
+
     // Clear saved filters when new data is imported
     sessionStorage.removeItem("dashboardFilters");
     router.push("/dashboard");
   };
 
   const handleDemoData = () => {
-    // Generate demo data and go straight to dashboard
     const demoRows = generateDemoData(500);
     const enrichedRows = enrichRows("Demo Data", demoRows);
     sessionStorage.setItem("pledgeData", JSON.stringify(enrichedRows));
-    // Clear saved filters when demo data is loaded
+    sessionStorage.setItem("dataSourceType", "legacy-pledges");
     sessionStorage.removeItem("dashboardFilters");
     router.push("/dashboard");
   };
 
   const currentFile = currentFileIndex !== null ? files[currentFileIndex] : null;
   const allValidated = files.length > 0 && files.every((f) => f.status === "validated");
+
+  // Check if current file is ready for validation
+  const isReadyToValidate = currentFile && (
+    // Transaction format: just needs data
+    (currentFile.transactionData && currentFile.transactionData.transactions.length > 0) ||
+    // Legacy format: has required mappings
+    ((currentFile.mapping?.age || currentFile.mapping?.dob) &&
+      currentFile.mapping?.pledgeCurrent &&
+      currentFile.mapping?.pledgePrior)
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 p-4 md:p-8">
@@ -163,7 +301,7 @@ export default function UploadPage() {
                   or click to browse
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Supports .xlsx and .csv files
+                  Supports ShulCloud exports, .xlsx, and .csv files
                 </p>
               </div>
 
@@ -224,7 +362,9 @@ export default function UploadPage() {
                           </>
                         )}
                         {f.status === "mapping" && (
-                          <span className="text-xs text-muted-foreground">Needs mapping</span>
+                          <span className="text-xs text-muted-foreground">
+                            {f.formatDetection?.format ? f.formatDetection.format.name : "Needs mapping"}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -245,101 +385,194 @@ export default function UploadPage() {
               {currentFile && (
                 <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader>
-                    <CardTitle className="text-lg md:text-xl font-bold text-slate-800 truncate">Configure: {currentFile.file.name}</CardTitle>
+                    <CardTitle className="text-lg md:text-xl font-bold text-slate-800 truncate">
+                      Configure: {currentFile.file.name}
+                    </CardTitle>
                     <CardDescription className="text-xs md:text-sm font-medium text-slate-500">
-                      Map columns to required fields
+                      {currentFile.formatDetection?.format
+                        ? `Detected: ${currentFile.formatDetection.format.name}`
+                        : "Map columns to required fields"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4 md:space-y-6">
-                    {(currentFile.mapping?.age || currentFile.mapping?.dob || currentFile.mapping?.pledgeCurrent || currentFile.mapping?.pledgePrior) && (
+                    {/* Format detection notice */}
+                    {currentFile.formatDetection?.format && (
                       <div className="flex items-start gap-2 p-3 bg-[#fcf7c5] border border-[#f2c41e] rounded-lg text-sm">
-                        <Sparkles className="h-4 w-4 text-[#c98109] mt-0.5 flex-shrink-0" />
+                        <Database className="h-4 w-4 text-[#c98109] mt-0.5 flex-shrink-0" />
                         <div className="text-[#401e09]">
-                          <strong>Smart mapping applied!</strong> We auto-detected some columns. Please verify they're correct.
+                          <strong>Format detected:</strong> {currentFile.formatDetection.format.name}
+                          {currentFile.formatDetection.confidence >= 0.9 && " (high confidence)"}
                         </div>
                       </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                          Age / Date of Birth
-                        </label>
-                        <Select
-                          value={currentFile.mapping?.age || currentFile.mapping?.dob || ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            const header = value.toLowerCase();
 
-                            // Smart detection: check if this looks like a DOB column
-                            const isDOB = /^(dob|date\s*of\s*birth|birth\s*date|birthday|birth\s*day|bdate)$/i.test(header);
+                    {/* ShulCloud Transaction Summary */}
+                    {currentFile.transactionData && (
+                      <div className="space-y-4">
+                        {/* Transaction summary */}
+                        <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <div className="text-muted-foreground">Transactions</div>
+                              <div className="font-semibold text-lg">{currentFile.transactionData.transactions.length.toLocaleString()}</div>
+                            </div>
+                            <div>
+                              <div className="text-muted-foreground">Years</div>
+                              <div className="font-semibold">
+                                {getTransactionYears(currentFile.transactionData.transactions).join(", ")}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-muted-foreground">Charge Types</div>
+                              <div className="font-semibold">{currentFile.transactionData.chargeTypes.length}</div>
+                            </div>
+                            <div>
+                              <div className="text-muted-foreground">Date Range</div>
+                              <div className="font-semibold text-xs">
+                                {currentFile.transactionData.dateRange && (
+                                  <>{currentFile.transactionData.dateRange.min.toLocaleDateString()} - {currentFile.transactionData.dateRange.max.toLocaleDateString()}</>
+                                )}
+                              </div>
+                            </div>
+                          </div>
 
-                            if (isDOB) {
-                              handleMappingChange("dob", value);
-                              handleMappingChange("age", "");
-                            } else {
-                              handleMappingChange("age", value);
-                              handleMappingChange("dob", "");
-                            }
-                          }}
-                        >
-                          <option value="">Select column...</option>
-                          {currentFile.headers.map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </Select>
+                          {/* Show charge types */}
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Charge Types Found:</div>
+                            <div className="flex flex-wrap gap-1">
+                              {currentFile.transactionData.chargeTypes.map((ct) => (
+                                <span key={ct} className="text-xs bg-white border rounded px-2 py-0.5">
+                                  {ct}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-xs text-muted-foreground">
+                          Year selection and charge type filtering will be available in the dashboard.
+                        </div>
+
+                        {/* Errors */}
+                        {currentFile.transactionData.errors.length > 0 && (
+                          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <AlertCircle className="h-5 w-5 text-destructive" />
+                              <h3 className="font-semibold text-destructive">
+                                Parse Errors ({currentFile.transactionData.errors.length})
+                              </h3>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              {currentFile.transactionData.errors.slice(0, 10).map((err, idx) => (
+                                <div key={idx}>
+                                  Row {err.row}: {err.message}
+                                </div>
+                              ))}
+                              {currentFile.transactionData.errors.length > 10 && (
+                                <div className="text-muted-foreground italic">
+                                  ...and {currentFile.transactionData.errors.length - 10} more errors
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
+                    )}
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                          ZIP Code <span className="text-muted-foreground">(optional)</span>
-                        </label>
-                        <Select
-                          value={currentFile.mapping?.zipCode || ""}
-                          onChange={(e) => handleMappingChange("zipCode", e.target.value)}
-                        >
-                          <option value="">Select column...</option>
-                          {currentFile.headers.map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
+                    {/* Legacy Format Column Mapping */}
+                    {!currentFile.transactionData && (
+                      <>
+                        {(currentFile.mapping?.age || currentFile.mapping?.dob || currentFile.mapping?.pledgeCurrent || currentFile.mapping?.pledgePrior) && (
+                          <div className="flex items-start gap-2 p-3 bg-[#fcf7c5] border border-[#f2c41e] rounded-lg text-sm">
+                            <Sparkles className="h-4 w-4 text-[#c98109] mt-0.5 flex-shrink-0" />
+                            <div className="text-[#401e09]">
+                              <strong>Smart mapping applied!</strong> We auto-detected some columns. Please verify they're correct.
+                            </div>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                              Age / Date of Birth
+                            </label>
+                            <Select
+                              value={currentFile.mapping?.age || currentFile.mapping?.dob || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const header = value.toLowerCase();
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Current FY Pledge</label>
-                        <Select
-                          value={currentFile.mapping?.pledgeCurrent || ""}
-                          onChange={(e) => handleMappingChange("pledgeCurrent", e.target.value)}
-                        >
-                          <option value="">Select column...</option>
-                          {currentFile.headers.map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
+                                const isDOB = /^(dob|date\s*of\s*birth|birth\s*date|birthday|birth\s*day|bdate)$/i.test(header);
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Prior FY Pledge</label>
-                        <Select
-                          value={currentFile.mapping?.pledgePrior || ""}
-                          onChange={(e) => handleMappingChange("pledgePrior", e.target.value)}
-                        >
-                          <option value="">Select column...</option>
-                          {currentFile.headers.map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                    </div>
+                                if (isDOB) {
+                                  handleMappingChange("dob", value);
+                                  handleMappingChange("age", "");
+                                } else {
+                                  handleMappingChange("age", value);
+                                  handleMappingChange("dob", "");
+                                }
+                              }}
+                            >
+                              <option value="">Select column...</option>
+                              {currentFile.headers.map((h) => (
+                                <option key={h} value={h}>
+                                  {h}
+                                </option>
+                              ))}
+                            </Select>
+                          </div>
 
-                    {currentFile.parsed && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                              ZIP Code <span className="text-muted-foreground">(optional)</span>
+                            </label>
+                            <Select
+                              value={currentFile.mapping?.zipCode || ""}
+                              onChange={(e) => handleMappingChange("zipCode", e.target.value)}
+                            >
+                              <option value="">Select column...</option>
+                              {currentFile.headers.map((h) => (
+                                <option key={h} value={h}>
+                                  {h}
+                                </option>
+                              ))}
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Current FY Pledge</label>
+                            <Select
+                              value={currentFile.mapping?.pledgeCurrent || ""}
+                              onChange={(e) => handleMappingChange("pledgeCurrent", e.target.value)}
+                            >
+                              <option value="">Select column...</option>
+                              {currentFile.headers.map((h) => (
+                                <option key={h} value={h}>
+                                  {h}
+                                </option>
+                              ))}
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Prior FY Pledge</label>
+                            <Select
+                              value={currentFile.mapping?.pledgePrior || ""}
+                              onChange={(e) => handleMappingChange("pledgePrior", e.target.value)}
+                            >
+                              <option value="">Select column...</option>
+                              {currentFile.headers.map((h) => (
+                                <option key={h} value={h}>
+                                  {h}
+                                </option>
+                              ))}
+                            </Select>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Validation Results for Legacy Format */}
+                    {!currentFile.transactionData && currentFile.parsed && (
                       <div className="space-y-4">
                         {currentFile.parsed.errors.length > 0 ? (
                           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
@@ -375,29 +608,45 @@ export default function UploadPage() {
                                 {currentFile.parsed.rows.length} rows parsed
                               </p>
                             </div>
-                            {allValidated && (
-                              <div className="flex justify-end">
-                                <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto bg-[#1886d9] hover:bg-[#0e69bb] text-white rounded-lg">
-                                  Continue to Dashboard →
-                                </Button>
-                              </div>
-                            )}
                           </div>
                         )}
                       </div>
                     )}
 
-                    {(currentFile.mapping?.age || currentFile.mapping?.dob) &&
-                      currentFile.mapping?.pledgeCurrent &&
-                      currentFile.mapping?.pledgePrior &&
-                      !currentFile.parsed && (
-                        <div className="flex justify-end">
-                          <Button onClick={handleValidate} size="lg" className="w-full sm:w-auto bg-[#1886d9] hover:bg-[#0e69bb] text-white rounded-lg">
-                            Validate File →
-                          </Button>
+                    {/* Validation success for transaction data */}
+                    {currentFile.transactionData && currentFile.status === "validated" && (
+                      <div className="rounded-lg border border-green-500/50 bg-green-500/10 p-4">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          <h3 className="font-semibold text-green-600">
+                            Data validated successfully
+                          </h3>
                         </div>
-                      )}
+                        <p className="text-sm mt-1">
+                          {currentFile.transactionData.transactions.length.toLocaleString()} transactions ready for analysis
+                        </p>
+                      </div>
+                    )}
 
+                    {/* Continue button */}
+                    {allValidated && (
+                      <div className="flex justify-end">
+                        <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto bg-[#1886d9] hover:bg-[#0e69bb] text-white rounded-lg">
+                          Continue to Dashboard →
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Validate button */}
+                    {isReadyToValidate && !currentFile.parsed && currentFile.status !== "validated" && (
+                      <div className="flex justify-end">
+                        <Button onClick={handleValidate} size="lg" className="w-full sm:w-auto bg-[#1886d9] hover:bg-[#0e69bb] text-white rounded-lg">
+                          Validate File →
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Preview table */}
                     {currentFile.preview && currentFile.preview.length > 0 && (
                       <div>
                         <h3 className="text-sm font-semibold mb-2">Preview (first 5 rows)</h3>
@@ -416,12 +665,9 @@ export default function UploadPage() {
                               {currentFile.preview.slice(0, 5).map((row, idx) => (
                                 <tr key={idx} className="border-t">
                                   {Object.entries(row).map(([key, val], colIdx) => {
-                                    // Format the value for display
                                     let displayValue = String(val);
 
-                                    // Check if this is a date column (either Excel serial or date string)
                                     if (typeof val === 'number' && val > 10000 && val < 100000) {
-                                      // Likely an Excel date serial number
                                       const excelEpoch = new Date(1899, 11, 30);
                                       const date = new Date(excelEpoch.getTime() + val * 24 * 60 * 60 * 1000);
                                       displayValue = date.toLocaleDateString('en-US', {

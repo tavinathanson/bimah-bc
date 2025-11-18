@@ -254,11 +254,12 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
               {/* What Gets Shared - Collapsed by default */}
               <details className="mb-4">
                 <summary className="cursor-pointer text-xs font-medium text-gray-500 hover:text-gray-700">
-                  What data gets shared?
+                  Privacy & what gets shared
                 </summary>
                 <div className="mt-2 text-xs text-gray-600 space-y-1 pl-2">
-                  <p><span className="text-green-600">Shared:</span> Pledge amounts, ages, ZIP codes</p>
-                  <p><span className="text-red-600">Never shared:</span> Names, addresses, emails</p>
+                  <p><span className="text-green-600">Shared:</span> Giving amounts (aggregated), ages, ZIP codes</p>
+                  <p><span className="text-red-600">Never shared:</span> Names, birthdays, addresses, emails, account IDs</p>
+                  <p className="text-gray-500 mt-1">Data is aggregated by household. Individual transactions are not exposed.</p>
                 </div>
               </details>
 

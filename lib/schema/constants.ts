@@ -27,3 +27,53 @@ export const AGE_COHORTS = [
   { label: "50-64", min: 50, max: 65 },
   { label: "65+", min: 65, max: Infinity },
 ] as const;
+
+/**
+ * Member tenure cohorts (years of membership)
+ */
+export const TENURE_COHORTS = [
+  { label: "New (0-2 yrs)", min: 0, max: 3 },
+  { label: "Established (3-5 yrs)", min: 3, max: 6 },
+  { label: "Committed (6-10 yrs)", min: 6, max: 11 },
+  { label: "Legacy (11+ yrs)", min: 11, max: Infinity },
+] as const;
+
+/**
+ * Common charge type groupings for synagogue giving
+ * Users can customize these, but these are sensible defaults
+ */
+export const CHARGE_TYPE_GROUPS = {
+  "Dues & Pledges": [
+    "Hineini Pledges",
+    "HH Pledges/Memorial Book",
+    "Membership Dues",
+    "Annual Pledge",
+  ],
+  "Programs & Education": [
+    "Religious School Fees",
+    "Adult Education",
+    "Youth Programs",
+  ],
+  "High Holidays": [
+    "High Holiday Tickets",
+    "Yizkor Book",
+  ],
+  "Other": [],
+} as const;
+
+/**
+ * Known ShulCloud column names for format detection
+ */
+export const SHULCLOUD_TRANSACTION_COLUMNS = [
+  "Date",
+  "ID",
+  "Member Since",
+  "Type",
+  "Charge",
+  "Join Date",
+  "Zip",
+  "Primary's Birthday",
+  "Account ID",
+  "Type External ID",
+  "Date Entered",
+] as const;

@@ -19,7 +19,8 @@
     "generate-demo-dob": "tsx scripts/generate-demo-data-dob.ts 2>/dev/null > demo-pledges-dob.csv && echo 'Demo DOB file generated: demo-pledges-dob.csv'",
     "generate-demo-zip": "tsx scripts/generate-demo-data-zip.ts 2>/dev/null > demo-pledges-zip.csv && echo 'Demo ZIP file generated: demo-pledges-zip.csv'",
     "generate-demo-wide": "tsx scripts/generate-demo-data-wide.ts 2>/dev/null > demo-pledges-wide.csv && echo 'Demo wide geography file generated: demo-pledges-wide.csv'",
-    "generate-invalid-demo": "tsx scripts/generate-invalid-demo-data.ts 2>/dev/null > demo-invalid.csv && echo 'Invalid demo file generated: demo-invalid.csv'"
+    "generate-invalid-demo": "tsx scripts/generate-invalid-demo-data.ts 2>/dev/null > demo-invalid.csv && echo 'Invalid demo file generated: demo-invalid.csv'",
+    "generate-demo-shulcloud": "tsx scripts/generate-demo-shulcloud.ts 200 2>/dev/null > demo-shulcloud.csv && echo 'ShulCloud demo file generated: demo-shulcloud.csv'"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",

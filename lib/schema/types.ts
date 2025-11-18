@@ -93,3 +93,48 @@ export const ParsedFileSchema = z.object({
 });
 
 export type ParsedFile = z.infer<typeof ParsedFileSchema>;
+
+/**
+ * Transaction record from ShulCloud or similar exports
+ */
+export const TransactionSchema = z.object({
+  date: z.date(),
+  accountId: z.string(),
+  chargeType: z.string(),
+  amount: z.number(),
+  zip: z.string().optional(),
+  primaryBirthday: z.date().optional(),
+  memberSince: z.date().optional(),
+  joinDate: z.date().optional(),
+  typeExternalId: z.string().optional(),
+});
+
+export type Transaction = z.infer<typeof TransactionSchema>;
+
+/**
+ * Aggregated household summary computed from transactions
+ */
+export const HouseholdSummarySchema = z.object({
+  accountId: z.string(),
+  age: z.number().optional(),
+  zip: z.string().optional(),
+  memberSince: z.date().optional(),
+  // Nested structure: chargeType -> year -> total amount
+  byChargeType: z.record(z.string(), z.record(z.string(), z.number())),
+  // For backward compatibility with existing dashboard
+  totalsByYear: z.record(z.string(), z.number()),
+});
+
+export type HouseholdSummary = z.infer<typeof HouseholdSummarySchema>;
+
+/**
+ * Analysis mode for dashboard views
+ */
+export const AnalysisMode = z.enum(["overview", "comparison", "by-charge-type", "member-journey"]);
+export type AnalysisMode = z.infer<typeof AnalysisMode>;
+
+/**
+ * Data source type - legacy pledge comparison or transaction-based
+ */
+export const DataSourceType = z.enum(["legacy-pledges", "transactions"]);
+export type DataSourceType = z.infer<typeof DataSourceType>;

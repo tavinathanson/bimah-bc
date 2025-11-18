@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,8 +15,10 @@ import {
   getAgeCohort,
   getPledgeBin,
 } from "@/lib/math/calculations";
+import { aggregateTransactionsToPledgeRows, type AggregationConfig } from "@/lib/parsing/transactionParser";
+import type { Transaction } from "@/lib/schema/types";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { AlertCircle, Filter, X, ChevronDown, ChevronUp, Info, Check, MapPin, Loader2 } from "lucide-react";
+import { AlertCircle, Filter, X, ChevronDown, ChevronUp, Info, Check, MapPin, Loader2, LayoutGrid, GitCompare, PieChart as PieChartIcon, Users } from "lucide-react";
 import { generateExcelWorkbook } from "@/lib/export/excelExporter";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -26,6 +28,7 @@ import { PublishModal } from "@/components/PublishModal";
 import { DeleteDashboardModal } from "@/components/DeleteDashboardModal";
 import { STATUS_DISPLAY_NAMES, STATUS_DISPLAY_NAMES_SHORT, DISPLAY_NAME_TO_STATUS, type StatusValue } from "@/lib/constants/statusDisplayNames";
 import { GeoToggle } from "@/components/dashboard/GeoToggle";
+import { CollapsibleSection } from "@/components/dashboard/CollapsibleSection";
 import type { Coordinates } from "@/lib/geo/geocoding";
 import { hasZipCodeData, aggregateByZipCode, type ZipAggregate } from "@/lib/geo/aggregation";
 import { geocodeZipCode, calculateDistanceFromPoint } from "@/lib/geo/geocoding";
@@ -108,6 +111,32 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
   // Tab state (Dashboard, Insights, Forecasts)
   const [activeTab, setActiveTab] = useState<"dashboard" | "insights" | "forecasts">("dashboard");
 
+  // Analysis mode - controls which charts and filters are shown
+  const [analysisMode, setAnalysisMode] = useState<"overview" | "comparison">("comparison");
+
+  // Transaction data and controls (for flexible aggregation)
+  const [rawTransactions, setRawTransactions] = useState<Transaction[]>([]);
+  const [dataSourceType, setDataSourceType] = useState<"legacy-pledges" | "transactions">("legacy-pledges");
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [availableChargeTypes, setAvailableChargeTypes] = useState<string[]>([]);
+
+  // Aggregation controls
+  const [selectedCurrentYear, setSelectedCurrentYear] = useState<number | null>(null);
+  const [selectedPriorYears, setSelectedPriorYears] = useState<number[]>([]);
+  const [selectedChargeTypes, setSelectedChargeTypes] = useState<string[]>([]);
+
+  // Dropdown states for new controls
+  const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
+  const [priorYearsDropdownOpen, setPriorYearsDropdownOpen] = useState(false);
+  const [chargeTypeDropdownOpen, setChargeTypeDropdownOpen] = useState(false);
+
+  // Collapsible section states
+  const [sectionsExpanded, setSectionsExpanded] = useState({
+    demographics: true,
+    giving: true,
+    geography: true,
+  });
+
   // Geographic state
   const hasZips = hasZipCodeData(data);
   const [geoEnabled, setGeoEnabled] = useState(false);
@@ -158,51 +187,116 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
   }, [hasZips, data.length]);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("pledgeData");
-    if (!stored) {
-      router.push("/import");
-      return;
-    }
+    const sourceType = sessionStorage.getItem("dataSourceType") || "legacy-pledges";
 
-    try {
-      const parsed = JSON.parse(stored) as PledgeRow[];
-      setData(parsed);
+    if (sourceType === "transactions") {
+      // Load raw transactions
+      const txnData = sessionStorage.getItem("transactionData");
+      const metaData = sessionStorage.getItem("transactionMetadata");
 
-      // Load published dashboard metadata if viewing a published dashboard
-      if (isPublishedView) {
-        const metaStored = sessionStorage.getItem("publishedReportMetadata");
-        if (metaStored) {
-          const meta = JSON.parse(metaStored);
-          setPublishedMeta({ title: meta.title, snapshotDate: meta.snapshotDate, reportId: meta.reportId });
+      if (!txnData) {
+        router.push("/import");
+        return;
+      }
+
+      try {
+        // Parse transactions and convert ISO strings back to Dates
+        const rawTxns = JSON.parse(txnData).map((t: any) => ({
+          ...t,
+          date: new Date(t.date),
+          primaryBirthday: t.primaryBirthday ? new Date(t.primaryBirthday) : undefined,
+          memberSince: t.memberSince ? new Date(t.memberSince) : undefined,
+          joinDate: t.joinDate ? new Date(t.joinDate) : undefined,
+        })) as Transaction[];
+
+        setRawTransactions(rawTxns);
+        setDataSourceType("transactions");
+
+        // Load metadata
+        if (metaData) {
+          const meta = JSON.parse(metaData);
+          setAvailableYears(meta.years || []);
+          setAvailableChargeTypes(meta.chargeTypes || []);
+
+          // Set defaults: most recent year as current, second most recent as prior
+          if (meta.years && meta.years.length > 0) {
+            setSelectedCurrentYear(meta.years[0]);
+            setSelectedPriorYears(meta.years.length > 1 ? [meta.years[1]] : []);
+          }
+          // Default to all charge types
+          setSelectedChargeTypes(meta.chargeTypes || []);
         }
+      } catch {
+        router.push("/import");
+        return;
+      }
+    } else {
+      // Load legacy pledge data
+      const stored = sessionStorage.getItem("pledgeData");
+      if (!stored) {
+        router.push("/import");
+        return;
       }
 
-      // Restore filter state
-      const savedFilters = sessionStorage.getItem("dashboardFilters");
-      if (savedFilters) {
-        const filters = JSON.parse(savedFilters);
-        // Migrate old string-based filters ("all") to new array format
-        setFilterCohort(Array.isArray(filters.filterCohort) ? filters.filterCohort : []);
-        setFilterStatus(Array.isArray(filters.filterStatus) ? filters.filterStatus : []);
-        setFilterChange(Array.isArray(filters.filterChange) ? filters.filterChange : []);
-        setFilterBin(Array.isArray(filters.filterBin) ? filters.filterBin : []);
-        setPledgeMode(filters.pledgeMode || "bins");
-        setMinPledge(filters.minPledge || "");
-        setMaxPledge(filters.maxPledge || "");
-        setMinAge(filters.minAge || "");
-        setMaxAge(filters.maxAge || "");
-        setShowDefinitions(filters.showDefinitions || false);
+      try {
+        const parsed = JSON.parse(stored) as PledgeRow[];
+        setData(parsed);
+        setDataSourceType("legacy-pledges");
+      } catch {
+        router.push("/import");
+        return;
       }
-    } catch {
-      router.push("/import");
-    } finally {
-      setLoading(false);
     }
+
+    // Load published dashboard metadata if viewing a published dashboard
+    if (isPublishedView) {
+      const metaStored = sessionStorage.getItem("publishedReportMetadata");
+      if (metaStored) {
+        const meta = JSON.parse(metaStored);
+        setPublishedMeta({ title: meta.title, snapshotDate: meta.snapshotDate, reportId: meta.reportId });
+      }
+    }
+
+    // Restore filter state
+    const savedFilters = sessionStorage.getItem("dashboardFilters");
+    if (savedFilters) {
+      const filters = JSON.parse(savedFilters);
+      // Migrate old string-based filters ("all") to new array format
+      setFilterCohort(Array.isArray(filters.filterCohort) ? filters.filterCohort : []);
+      setFilterStatus(Array.isArray(filters.filterStatus) ? filters.filterStatus : []);
+      setFilterChange(Array.isArray(filters.filterChange) ? filters.filterChange : []);
+      setFilterBin(Array.isArray(filters.filterBin) ? filters.filterBin : []);
+      setPledgeMode(filters.pledgeMode || "bins");
+      setMinPledge(filters.minPledge || "");
+      setMaxPledge(filters.maxPledge || "");
+      setMinAge(filters.minAge || "");
+      setMaxAge(filters.maxAge || "");
+      setShowDefinitions(filters.showDefinitions || false);
+
+      // Restore aggregation controls if saved
+      if (filters.selectedCurrentYear) setSelectedCurrentYear(filters.selectedCurrentYear);
+      if (filters.selectedPriorYears) setSelectedPriorYears(filters.selectedPriorYears);
+      if (filters.selectedChargeTypes) setSelectedChargeTypes(filters.selectedChargeTypes);
+    }
+
+    setLoading(false);
   }, [router, isPublishedView]);
+
+  // Aggregate transactions when selections change
+  useEffect(() => {
+    if (dataSourceType === "transactions" && rawTransactions.length > 0 && selectedCurrentYear && selectedPriorYears.length > 0) {
+      const aggregatedData = aggregateTransactionsToPledgeRows(rawTransactions, {
+        chargeTypes: selectedChargeTypes,
+        currentYear: selectedCurrentYear,
+        priorYears: selectedPriorYears,
+      });
+      setData(aggregatedData);
+    }
+  }, [dataSourceType, rawTransactions, selectedCurrentYear, selectedPriorYears, selectedChargeTypes]);
 
   // Save filter state whenever it changes
   useEffect(() => {
-    if (data.length > 0) {
+    if (data.length > 0 || rawTransactions.length > 0) {
       const filters = {
         filterCohort,
         filterStatus,
@@ -214,10 +308,14 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
         minAge,
         maxAge,
         showDefinitions,
+        // Aggregation controls
+        selectedCurrentYear,
+        selectedPriorYears,
+        selectedChargeTypes,
       };
       sessionStorage.setItem("dashboardFilters", JSON.stringify(filters));
     }
-  }, [data.length, filterCohort, filterStatus, filterChange, filterBin, pledgeMode, minPledge, maxPledge, minAge, maxAge, showDefinitions]);
+  }, [data.length, rawTransactions.length, filterCohort, filterStatus, filterChange, filterBin, pledgeMode, minPledge, maxPledge, minAge, maxAge, showDefinitions, selectedCurrentYear, selectedPriorYears, selectedChargeTypes]);
 
   // Track the last geocoded coords to avoid re-geocoding unnecessarily
   const lastGeocodedCoordsRef = useRef<string | null>(null);
@@ -330,6 +428,100 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
 
     return ranges;
   }, [geoAggregates]);
+
+  // Calculate charge type breakdown (for transaction data only)
+  const chargeTypeBreakdown = useMemo(() => {
+    if (dataSourceType !== "transactions" || !rawTransactions.length || !selectedCurrentYear) {
+      return [];
+    }
+
+    // Filter transactions by selected charge types and current year
+    const currentYearTxns = rawTransactions.filter(t => {
+      const year = t.date.getFullYear();
+      const matchesYear = year === selectedCurrentYear;
+      const matchesType = selectedChargeTypes.length === 0 || selectedChargeTypes.includes(t.chargeType);
+      return matchesYear && matchesType;
+    });
+
+    // Group by charge type
+    const byType = new Map<string, { total: number; count: number }>();
+    for (const t of currentYearTxns) {
+      const existing = byType.get(t.chargeType) || { total: 0, count: 0 };
+      existing.total += t.amount;
+      existing.count += 1;
+      byType.set(t.chargeType, existing);
+    }
+
+    // Convert to array and sort by total descending
+    return Array.from(byType.entries())
+      .map(([name, data]) => ({
+        name,
+        total: data.total,
+        count: data.count,
+        average: data.total / data.count,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [dataSourceType, rawTransactions, selectedCurrentYear, selectedChargeTypes]);
+
+  // Calculate tenure breakdown (for transaction data only)
+  const tenureBreakdown = useMemo(() => {
+    if (dataSourceType !== "transactions" || !rawTransactions.length || !selectedCurrentYear) {
+      return [];
+    }
+
+    // Define tenure cohorts
+    const tenureCohorts = [
+      { label: "New (0-2 yrs)", min: 0, max: 3 },
+      { label: "Established (3-5 yrs)", min: 3, max: 6 },
+      { label: "Committed (6-10 yrs)", min: 6, max: 11 },
+      { label: "Legacy (11+ yrs)", min: 11, max: Infinity },
+    ];
+
+    // Get unique accounts with their member since dates and current year totals
+    const accountData = new Map<string, { memberSince?: Date; currentTotal: number }>();
+
+    for (const t of rawTransactions) {
+      const year = t.date.getFullYear();
+      const matchesType = selectedChargeTypes.length === 0 || selectedChargeTypes.includes(t.chargeType);
+
+      if (!matchesType) continue;
+
+      const existing = accountData.get(t.accountId) || { currentTotal: 0 };
+      if (t.memberSince && !existing.memberSince) {
+        existing.memberSince = t.memberSince;
+      }
+      if (year === selectedCurrentYear) {
+        existing.currentTotal += t.amount;
+      }
+      accountData.set(t.accountId, existing);
+    }
+
+    // Calculate tenure for each account and group by cohort
+    const now = new Date();
+    const cohortMetrics = tenureCohorts.map(cohort => {
+      let households = 0;
+      let totalGiving = 0;
+
+      for (const [_, data] of accountData) {
+        if (data.memberSince) {
+          const years = (now.getTime() - data.memberSince.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+          if (years >= cohort.min && years < cohort.max) {
+            households++;
+            totalGiving += data.currentTotal;
+          }
+        }
+      }
+
+      return {
+        name: cohort.label,
+        households,
+        totalGiving,
+        averageGiving: households > 0 ? totalGiving / households : 0,
+      };
+    });
+
+    return cohortMetrics.filter(c => c.households > 0);
+  }, [dataSourceType, rawTransactions, selectedCurrentYear, selectedChargeTypes]);
 
   if (loading) {
     return (
@@ -722,10 +914,10 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
       if (filterBin.length > 0 && pledgeMode === "custom" && (minPledge || maxPledge)) {
         const rangeSummary = getSmartRangeSummary(filterBin, "$");
         const customText = `$${minPledge || "0"}-$${maxPledge || "∞"}`;
-        summaries.push(`Pledge: ${rangeSummary}, ${customText}`);
+        summaries.push(`Amount: ${rangeSummary}, ${customText}`);
       } else if (filterBin.length > 0) {
         const rangeSummary = getSmartRangeSummary(filterBin, "$");
-        summaries.push(`Pledge: ${rangeSummary}`);
+        summaries.push(`Amount: ${rangeSummary}`);
       } else if (pledgeMode === "custom") {
         const customText = minPledge && maxPledge
           ? `$${minPledge}-$${maxPledge}`
@@ -734,7 +926,7 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
           : maxPledge
           ? `≤$${maxPledge}`
           : "custom range";
-        summaries.push(`Pledge: ${customText}`);
+        summaries.push(`Amount: ${customText}`);
       }
     }
 
@@ -840,6 +1032,167 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
             </div>
           </div>
         )}
+
+        {/* Analysis Mode Selector */}
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-slate-600">Analysis Mode:</span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setAnalysisMode("overview")}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  analysisMode === "overview"
+                    ? "bg-blue-100 text-blue-700 font-medium"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+                Overview
+              </button>
+              <button
+                onClick={() => setAnalysisMode("comparison")}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  analysisMode === "comparison"
+                    ? "bg-blue-100 text-blue-700 font-medium"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <GitCompare className="h-4 w-4" />
+                Year Comparison
+              </button>
+            </div>
+            <span className="text-xs text-muted-foreground ml-auto hidden sm:block">
+              {analysisMode === "overview"
+                ? "Aggregate view of current year data"
+                : "Compare current vs prior year pledges"
+              }
+            </span>
+          </div>
+
+          {/* Year and Charge Type Controls for Transaction Data */}
+          {dataSourceType === "transactions" && availableYears.length > 0 && (
+            <div className="flex flex-wrap items-center gap-4 pt-3 border-t mt-3">
+              {/* Current Year Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Current:</span>
+                <select
+                  value={selectedCurrentYear || ""}
+                  onChange={(e) => setSelectedCurrentYear(parseInt(e.target.value))}
+                  className="text-sm border rounded px-2 py-1 bg-white"
+                >
+                  {availableYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Prior Years Selector */}
+              <div className="relative">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">vs Prior:</span>
+                  <button
+                    onClick={() => setPriorYearsDropdownOpen(!priorYearsDropdownOpen)}
+                    className={`text-sm border rounded px-2 py-1 bg-white flex items-center gap-1 ${selectedPriorYears.length > 0 ? "border-blue-400" : ""}`}
+                  >
+                    {selectedPriorYears.length === 0
+                      ? "Select years"
+                      : selectedPriorYears.length === 1
+                      ? selectedPriorYears[0]
+                      : `${selectedPriorYears.sort((a, b) => a - b)[0]}-${selectedPriorYears.sort((a, b) => a - b)[selectedPriorYears.length - 1]}`
+                    }
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                </div>
+                {priorYearsDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setPriorYearsDropdownOpen(false)} />
+                    <div className="absolute z-20 mt-1 bg-white border rounded-lg shadow-lg p-2 min-w-[120px]">
+                      {availableYears.filter(y => y !== selectedCurrentYear).map(year => (
+                        <label key={year} className="flex items-center gap-2 p-1 hover:bg-slate-50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedPriorYears.includes(year)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedPriorYears([...selectedPriorYears, year]);
+                              } else {
+                                setSelectedPriorYears(selectedPriorYears.filter(y => y !== year));
+                              }
+                            }}
+                            className="rounded"
+                          />
+                          <span className="text-sm">{year}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Charge Type Selector */}
+              <div className="relative">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Types:</span>
+                  <button
+                    onClick={() => setChargeTypeDropdownOpen(!chargeTypeDropdownOpen)}
+                    className={`text-sm border rounded px-2 py-1 bg-white flex items-center gap-1 max-w-[200px] truncate ${selectedChargeTypes.length < availableChargeTypes.length ? "border-blue-400" : ""}`}
+                  >
+                    {selectedChargeTypes.length === availableChargeTypes.length
+                      ? `All (${availableChargeTypes.length})`
+                      : `${selectedChargeTypes.length} selected`
+                    }
+                    <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                  </button>
+                </div>
+                {chargeTypeDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setChargeTypeDropdownOpen(false)} />
+                    <div className="absolute z-20 mt-1 bg-white border rounded-lg shadow-lg p-2 min-w-[200px] max-h-60 overflow-y-auto">
+                      <div className="flex gap-2 mb-2 pb-2 border-b">
+                        <button
+                          onClick={() => setSelectedChargeTypes(availableChargeTypes)}
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          All
+                        </button>
+                        <button
+                          onClick={() => setSelectedChargeTypes([])}
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          None
+                        </button>
+                      </div>
+                      {availableChargeTypes.map(ct => (
+                        <label key={ct} className="flex items-center gap-2 p-1 hover:bg-slate-50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedChargeTypes.includes(ct)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedChargeTypes([...selectedChargeTypes, ct]);
+                              } else {
+                                setSelectedChargeTypes(selectedChargeTypes.filter(c => c !== ct));
+                              }
+                            }}
+                            className="rounded"
+                          />
+                          <span className="text-sm truncate">{ct}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Show current comparison summary */}
+              {selectedPriorYears.length > 1 && (
+                <span className="text-xs text-muted-foreground italic">
+                  (comparing to {selectedPriorYears.length}-year average)
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Dashboard Content - Always show for now */}
         <Card className="border-0 shadow-lg shadow-blue-100/50 bg-white/70 backdrop-blur-sm">
@@ -994,11 +1347,11 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
                   )}
                 </div>
 
-                {/* Pledge Amount Filter */}
+                {/* Giving Amount Filter */}
                 <div className="relative">
                   <div className="flex items-center gap-2 mb-1.5 h-7">
                     <label className={`text-xs font-medium ${(filterBin.length > 0 || pledgeMode === "custom") ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
-                      Pledge Amount
+                      Amount
                     </label>
                     {(filterBin.length > 0 || pledgeMode === "custom") && <span className="text-blue-600 text-sm">●</span>}
                   </div>
@@ -1008,7 +1361,7 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
                   >
                     <span className={(filterBin.length === 0 && pledgeMode !== "custom") ? "text-muted-foreground" : ""}>
                       {filterBin.length === 0 && pledgeMode !== "custom"
-                        ? "All Pledges"
+                        ? "All Amounts"
                         : filterBin.length > 0 && pledgeMode === "custom" && (minPledge || maxPledge)
                         ? `${getSmartRangeSummary(filterBin, "$")} + custom`
                         : filterBin.length > 0
@@ -1235,11 +1588,12 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
                   )}
                 </div>
 
-                {/* Pledge Change Filter */}
+                {/* Change Direction Filter - Only show in comparison mode */}
+                {analysisMode === "comparison" && (
                 <div className="relative">
                   <div className="flex items-center gap-2 mb-1.5 h-7">
                     <label className={`text-xs font-medium ${filterChange.length > 0 ? "text-blue-700 font-semibold" : "text-muted-foreground"}`}>
-                      Pledge Change
+                      Change
                     </label>
                     {filterChange.length > 0 && <span className="text-blue-600 text-sm">●</span>}
                   </div>
@@ -1301,6 +1655,7 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
                     </>
                   )}
                 </div>
+                )}
 
                 {/* Distance Filter - only shown when geo is enabled and location is set */}
                 {geoEnabled && synagogueCoords && (
@@ -1444,7 +1799,7 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
 
           <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardHeader className="py-5 md:py-6">
-              <CardDescription className="text-xs md:text-sm mb-2 font-medium text-slate-600">Current Pledges</CardDescription>
+              <CardDescription className="text-xs md:text-sm mb-2 font-medium text-slate-600">Current Year Total</CardDescription>
               <CardTitle className="text-2xl md:text-3xl font-bold">{formatCurrency(totals.totalPledgedCurrent)}</CardTitle>
               <CardDescription className="text-xs md:text-sm mt-2.5 text-slate-500">
                 Average: <span className="font-semibold text-slate-700">{formatCurrency(totals.totalPledgedCurrent / totals.totalHouseholds)}</span>
@@ -1474,7 +1829,7 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
             <CardHeader className="py-5 md:py-6">
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-4 min-w-0">
-                  <CardDescription className="text-xs md:text-sm flex-shrink-0 font-medium text-slate-600">Pledge Status</CardDescription>
+                  <CardDescription className="text-xs md:text-sm flex-shrink-0 font-medium text-slate-600">Giving Status</CardDescription>
                   <CardDescription className="text-xs text-right truncate min-w-0 text-slate-500">
                     {totals.totalHouseholds} of {data.length}
                   </CardDescription>
@@ -1505,11 +1860,18 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
+        {/* Giving Patterns Section */}
+        <CollapsibleSection
+          title="Giving Patterns"
+          icon={<PieChartIcon className="h-4 w-4" />}
+          isExpanded={sectionsExpanded.giving}
+          onToggle={() => setSectionsExpanded(prev => ({ ...prev, giving: !prev.giving }))}
+          badge={analysisMode === "comparison" ? "Year Comparison" : "Current Year"}
+        >
           {showStatusChart && (
             <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Pledge Status Distribution</CardTitle>
+                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Giving Status Distribution</CardTitle>
                 <CardDescription className="text-xs font-medium text-slate-500">
                   {filteredData.length} of {data.length} Households
                 </CardDescription>
@@ -1579,10 +1941,10 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
             </Card>
           )}
 
-          {showChangeChart && (
+          {showChangeChart && analysisMode === "comparison" && (
             <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Renewed Pledge Changes</CardTitle>
+                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Year-over-Year Changes</CardTitle>
                 <CardDescription className="text-xs font-medium text-slate-500">
                   {filteredData.filter(r => r.status === "renewed").length} Renewed of {filteredData.length} Households
                 </CardDescription>
@@ -1676,20 +2038,20 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
           {showBinChart && (
             <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Households by Pledge Bin</CardTitle>
+                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Households by Giving Level</CardTitle>
                 <CardDescription className="text-xs font-medium text-slate-500">
-                  {filteredData.filter(r => r.pledgeCurrent > 0).length} with Pledges &gt; $0 of {filteredData.length} Households
+                  {filteredData.filter(r => r.pledgeCurrent > 0).length} with giving &gt; $0 of {filteredData.length} Households
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {binChartData.length === 0 ? (
                   <div className="h-[250px] md:h-[300px] flex items-center justify-center text-center p-4">
                     <div className="text-muted-foreground">
-                      <p className="font-medium mb-2">No pledges &gt; $0 to display</p>
+                      <p className="font-medium mb-2">No giving &gt; $0 to display</p>
                       <p className="text-sm">
                         {filteredData.length === 0
                           ? "No households match the current filters"
-                          : `All ${filteredData.length} households have $0 pledges`}
+                          : `All ${filteredData.length} households have $0 giving`}
                       </p>
                     </div>
                   </div>
@@ -1734,8 +2096,103 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
             </Card>
           )}
 
+          {/* Tenure Analysis Chart - Only for transaction data */}
+          {dataSourceType === "transactions" && tenureBreakdown.length > 0 && (
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-indigo-600" />
+                  Giving by Member Tenure
+                </CardTitle>
+                <CardDescription className="text-xs font-medium text-slate-500">
+                  {selectedCurrentYear} • Average giving per household by membership length
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
+                  <BarChart data={tenureBreakdown}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0]?.payload;
+                          return (
+                            <div className="bg-white p-3 rounded-lg shadow-lg border">
+                              <p className="font-semibold">{data.name}</p>
+                              <p className="text-sm">{data.households} households</p>
+                              <p className="text-sm">Total: {formatCurrency(data.totalGiving)}</p>
+                              <p className="text-sm font-medium text-indigo-600">
+                                Average: {formatCurrency(data.averageGiving)}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="averageGiving" fill="#6366f1" name="Average Giving" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Charge Type Breakdown Chart - Only for transaction data */}
+          {dataSourceType === "transactions" && chargeTypeBreakdown.length > 0 && (
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Giving by Charge Type</CardTitle>
+                <CardDescription className="text-xs font-medium text-slate-500">
+                  {selectedCurrentYear} totals • {chargeTypeBreakdown.length} types
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
+                  <BarChart data={chargeTypeBreakdown} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={120}
+                      tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + "..." : value}
+                    />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0]?.payload;
+                          return (
+                            <div className="bg-white p-3 rounded-lg shadow-lg border">
+                              <p className="font-semibold">{data.name}</p>
+                              <p className="text-sm">Total: {formatCurrency(data.total)}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {data.count} transactions • Avg: {formatCurrency(data.average)}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="total" fill="#8b5cf6" name="Total" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+        </CollapsibleSection>
+
+        {/* Geography Section */}
+        {geoEnabled && (
+        <CollapsibleSection
+          title="Geography"
+          icon={<MapPin className="h-4 w-4" />}
+          isExpanded={sectionsExpanded.geography}
+          onToggle={() => setSectionsExpanded(prev => ({ ...prev, geography: !prev.geography }))}
+        >
           {/* Geographic Map Card */}
-          {geoEnabled && (
             <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -1774,10 +2231,9 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
                 )}
               </CardContent>
             </Card>
-          )}
 
           {/* Distance Histogram Card */}
-          {geoEnabled && showDistanceHistogram && (
+          {showDistanceHistogram && (
             <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -1832,7 +2288,8 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
               </CardContent>
             </Card>
           )}
-        </div>
+        </CollapsibleSection>
+        )}
 
         <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="pb-4">
@@ -1871,7 +2328,7 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
         <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg md:text-xl font-bold text-slate-800">
-              {pledgeMode === "custom" ? "Custom Range Metrics" : "Pledge Bin Metrics"}
+              {pledgeMode === "custom" ? "Custom Range Metrics" : "Giving Level Metrics"}
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-4 md:pb-6">
