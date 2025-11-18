@@ -10,7 +10,8 @@ CREATE TABLE published_reports (
   created_at TIMESTAMP DEFAULT NOW(),
   synagogue_address TEXT,           -- Optional: Address for geographic analysis
   synagogue_lat NUMERIC(10,7),      -- Optional: Latitude for geographic center
-  synagogue_lng NUMERIC(10,7)       -- Optional: Longitude for geographic center
+  synagogue_lng NUMERIC(10,7),      -- Optional: Longitude for geographic center
+  password_hash TEXT                -- Optional: PBKDF2 hash for password protection
 );
 
 -- Anonymous pledge rows
@@ -31,3 +32,4 @@ COMMENT ON TABLE published_reports IS 'Metadata for published pledge reports. Ea
 COMMENT ON TABLE report_rows IS 'Anonymous pledge data rows. Contains only age, pledge amounts, and optional ZIP code.';
 COMMENT ON COLUMN published_reports.report_id IS '21-character nanoid (128-bit entropy) for secure, unguessable URLs';
 COMMENT ON COLUMN published_reports.snapshot_date IS 'Date when the pledge data was captured. Ages are static snapshots.';
+COMMENT ON COLUMN published_reports.password_hash IS 'Optional PBKDF2 hash with salt for password-protected reports';

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { X, Lock, Upload, Check, Copy, ExternalLink, Loader2, Globe, Shield, AlertCircle } from "lucide-react";
+import { X, Lock, Upload, Check, Copy, ExternalLink, Loader2, Globe, AlertCircle, Eye, EyeOff } from "lucide-react";
 import type { RawRow } from "@/lib/schema/types";
 
 interface PublishModalProps {
@@ -20,6 +20,11 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
   const [published, setPublished] = useState(false);
   const [reportUrl, setReportUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [enablePassword, setEnablePassword] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (!isOpen) return null;
 
@@ -30,6 +35,13 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
       return;
     }
     setTitleError("");
+
+    // Validate password if enabled
+    if (enablePassword && password.length < 4) {
+      setPasswordError("Password must be at least 4 characters");
+      return;
+    }
+    setPasswordError("");
 
     setIsPublishing(true);
 
@@ -56,6 +68,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
           synagogueAddress: synagogueAddress || undefined,
           synagogueLat: synagogueCoords?.lat || undefined,
           synagogueLng: synagogueCoords?.lon || undefined,
+          password: enablePassword ? password : undefined,
         }),
       });
 
@@ -65,6 +78,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
 
       const result = await response.json();
       setReportUrl(result.url);
+      setIsPasswordProtected(result.isPasswordProtected);
       setPublished(true);
 
       // Store in recent dashboards (localStorage)
@@ -97,6 +111,10 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
     setPublished(false);
     setReportUrl("");
     setCopied(false);
+    setEnablePassword(false);
+    setPassword("");
+    setPasswordError("");
+    setIsPasswordProtected(false);
     onClose();
   };
 
@@ -106,7 +124,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <CardContent className="p-6">
           {/* Header */}
@@ -124,21 +142,8 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
 
           {!published ? (
             <>
-              {/* Who Can Access - Like Google Drive */}
-              <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <Globe className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900 mb-1">Anyone with the link</p>
-                    <p className="text-sm text-gray-600">
-                      Anyone who has the link will be able to view this dashboard. No password or login required.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               {/* Dashboard Title */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Dashboard Title <span className="text-red-500">*</span>
                 </label>
@@ -159,61 +164,101 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
                 )}
               </div>
 
-              {/* Snapshot Info */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  <strong>Snapshot Date:</strong> {new Date().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </p>
-                <p className="text-sm text-gray-600 mt-2">
-                  <strong>Total Households:</strong> {data.length}
-                </p>
+              {/* Password Protection Toggle - Inline style */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">Password protect</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEnablePassword(!enablePassword);
+                      if (!enablePassword) {
+                        setPasswordError("");
+                      }
+                    }}
+                    disabled={isPublishing}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      enablePassword ? "bg-[#1886d9]" : "bg-gray-300"
+                    } ${isPublishing ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <span
+                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                        enablePassword ? "translate-x-5" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Password Input */}
+                {enablePassword && (
+                  <div className="mt-3 pl-6">
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (passwordError) setPasswordError("");
+                        }}
+                        placeholder="Enter password (min 4 characters)"
+                        className={`w-full pr-10 ${passwordError ? "border-red-500" : ""}`}
+                        maxLength={100}
+                        disabled={isPublishing}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        disabled={isPublishing}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {passwordError && (
+                      <div className="flex items-center gap-1 mt-2 text-red-600 text-sm">
+                        <AlertCircle className="h-4 w-4" />
+                        <span>{passwordError}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* URL Example */}
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <Shield className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-gray-700">
-                    <p className="font-semibold mb-2">Your shareable link will look like:</p>
-                    <p className="font-mono text-xs bg-white px-3 py-2 rounded border border-gray-200 mb-3">
-                      {typeof window !== 'undefined' ? window.location.host : 'your-domain.com'}/<span className="text-blue-600">xK9mP2qR8tBvN5hZ7wLcJ</span>
-                    </p>
-                    <ul className="space-y-1 text-gray-600">
-                      <li>✓ <strong>Secure:</strong> Impossible to guess (21 random characters)</li>
-                      <li>✓ <strong>Private:</strong> Not listed in search engines like Google</li>
-                      <li>✓ <strong>Anonymous data only:</strong> No names or personal info</li>
-                    </ul>
-                  </div>
+              {/* Divider */}
+              <hr className="my-4 border-gray-200" />
+
+              {/* Summary info - compact */}
+              <div className="mb-4 text-sm text-gray-600 space-y-2">
+                <p><strong>{data.length}</strong> households · <strong>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong></p>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Your link will look like:</p>
+                  <p className="font-mono text-xs text-gray-700">
+                    {typeof window !== 'undefined' ? window.location.host : 'your-domain.com'}/<span className="text-blue-600">xK9mP2qR8tBvN5hZ</span>
+                  </p>
                 </div>
+                <p className="text-xs text-gray-500">
+                  {enablePassword
+                    ? "Anyone with the link and password can view"
+                    : "Anyone with the link can view"
+                  }
+                </p>
               </div>
 
               {/* What Gets Shared - Collapsed by default */}
-              <details className="mb-6">
-                <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  What data gets uploaded?
+              <details className="mb-4">
+                <summary className="cursor-pointer text-xs font-medium text-gray-500 hover:text-gray-700">
+                  What data gets shared?
                 </summary>
-                <div className="mt-3 ml-6 text-sm text-gray-600 space-y-2">
-                  <div>
-                    <p className="font-medium text-green-700">✓ SHARED:</p>
-                    <ul className="list-disc list-inside ml-2">
-                      <li>Pledge amounts ($1,800, $3,600, etc.)</li>
-                      <li>Age groups (45, 62, etc.)</li>
-                      <li>ZIP codes (if you included them)</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="font-medium text-red-700">✗ NEVER SHARED:</p>
-                    <ul className="list-disc list-inside ml-2">
-                      <li>Names</li>
-                      <li>Full addresses</li>
-                      <li>Email or phone numbers</li>
-                    </ul>
-                  </div>
+                <div className="mt-2 text-xs text-gray-600 space-y-1 pl-2">
+                  <p><span className="text-green-600">Shared:</span> Pledge amounts, ages, ZIP codes</p>
+                  <p><span className="text-red-600">Never shared:</span> Names, addresses, emails</p>
                 </div>
               </details>
 
@@ -302,11 +347,23 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
                 {/* Access Info */}
                 <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-6">
                   <div className="flex items-start gap-3">
-                    <Globe className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                    {isPasswordProtected ? (
+                      <Lock className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <Globe className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                    )}
                     <div>
-                      <p className="font-semibold text-gray-900 mb-1">Anyone with the link can view</p>
+                      <p className="font-semibold text-gray-900 mb-1">
+                        {isPasswordProtected
+                          ? "Password protected"
+                          : "Anyone with the link can view"
+                        }
+                      </p>
                       <p className="text-sm text-gray-600">
-                        Share this link via email, Slack, or any messaging app. No password needed.
+                        {isPasswordProtected
+                          ? "Share the link and password separately with people who need access."
+                          : "Share this link via email, Slack, or any messaging app. No password needed."
+                        }
                       </p>
                     </div>
                   </div>

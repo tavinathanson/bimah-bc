@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { generateReportId } from '@/lib/generateReportId';
+import { hashPassword } from '@/lib/password';
 import { z } from 'zod';
 
 /**
@@ -18,6 +19,7 @@ const PublishRequestSchema = z.object({
   synagogueAddress: z.string().optional(),
   synagogueLat: z.number().optional(),
   synagogueLng: z.number().optional(),
+  password: z.string().min(4).max(100).optional(),
 });
 
 /**
@@ -30,15 +32,18 @@ export async function POST(request: NextRequest) {
   try {
     // Parse and validate request body
     const body = await request.json();
-    const { title, snapshotDate, rows, synagogueAddress, synagogueLat, synagogueLng } = PublishRequestSchema.parse(body);
+    const { title, snapshotDate, rows, synagogueAddress, synagogueLat, synagogueLng, password } = PublishRequestSchema.parse(body);
 
     // Generate unique report ID
     const reportId = generateReportId();
 
+    // Hash password if provided
+    const passwordHash = password ? hashPassword(password) : null;
+
     // Insert report metadata
     await sql`
-      INSERT INTO published_reports (report_id, title, snapshot_date, synagogue_address, synagogue_lat, synagogue_lng)
-      VALUES (${reportId}, ${title}, ${snapshotDate}, ${synagogueAddress ?? null}, ${synagogueLat ?? null}, ${synagogueLng ?? null})
+      INSERT INTO published_reports (report_id, title, snapshot_date, synagogue_address, synagogue_lat, synagogue_lng, password_hash)
+      VALUES (${reportId}, ${title}, ${snapshotDate}, ${synagogueAddress ?? null}, ${synagogueLat ?? null}, ${synagogueLng ?? null}, ${passwordHash})
     `;
 
     // Bulk insert rows
@@ -64,6 +69,7 @@ export async function POST(request: NextRequest) {
       success: true,
       reportId,
       url,
+      isPasswordProtected: !!password,
     });
 
   } catch (error) {

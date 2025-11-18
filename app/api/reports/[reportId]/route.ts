@@ -14,6 +14,7 @@ export interface PublishedReport {
   synagogueAddress?: string;
   synagogueLat?: number;
   synagogueLng?: number;
+  isPasswordProtected?: boolean;
 }
 
 /**

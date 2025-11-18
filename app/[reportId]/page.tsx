@@ -17,6 +17,7 @@ export const metadata: Metadata = {
 
 /**
  * Fetch published report data directly from database
+ * For password-protected reports, only returns metadata (not rows) until verified
  */
 async function getReport(reportId: string): Promise<PublishedReport | null> {
   try {
@@ -27,7 +28,7 @@ async function getReport(reportId: string): Promise<PublishedReport | null> {
 
     // Fetch report metadata
     const reportResult = await sql`
-      SELECT report_id, title, snapshot_date, created_at, synagogue_address, synagogue_lat, synagogue_lng
+      SELECT report_id, title, snapshot_date, created_at, synagogue_address, synagogue_lat, synagogue_lng, password_hash
       FROM published_reports
       WHERE report_id = ${reportId}
     `;
@@ -40,8 +41,21 @@ async function getReport(reportId: string): Promise<PublishedReport | null> {
     }
 
     const report = reportRows[0];
+    const isPasswordProtected = !!report.password_hash;
 
-    // Fetch all rows for this report
+    // For password-protected reports, don't fetch data until verified
+    if (isPasswordProtected) {
+      return {
+        reportId: report.report_id,
+        title: report.title,
+        snapshotDate: report.snapshot_date,
+        createdAt: report.created_at,
+        rows: [], // Empty - must verify password first
+        isPasswordProtected: true,
+      };
+    }
+
+    // Fetch all rows for this report (only for non-protected reports)
     const rowsResult = await sql`
       SELECT age, pledge_current, pledge_prior, zip_code
       FROM report_rows
@@ -70,6 +84,7 @@ async function getReport(reportId: string): Promise<PublishedReport | null> {
       ...(report.synagogue_address && { synagogueAddress: report.synagogue_address }),
       ...(report.synagogue_lat !== null && report.synagogue_lat !== undefined && { synagogueLat: Number(report.synagogue_lat) }),
       ...(report.synagogue_lng !== null && report.synagogue_lng !== undefined && { synagogueLng: Number(report.synagogue_lng) }),
+      isPasswordProtected: false,
     };
   } catch (error) {
     console.error('Error fetching report:', error);
