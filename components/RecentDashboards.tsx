@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Clock, Copy, Check } from "lucide-react";
+import { ExternalLink, Clock, Copy, Check, Lock } from "lucide-react";
 
 interface RecentDashboard {
   title: string;
   url: string;
   reportId: string;
   publishedAt: string;
+  isPasswordProtected?: boolean;
 }
 
 export function RecentDashboards() {
@@ -35,10 +36,10 @@ export function RecentDashboards() {
 
   return (
     <Card className="border border-gray-100 shadow-lg bg-white/70 backdrop-blur-sm">
-      <CardHeader>
+      <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Clock className="h-5 w-5 text-[#1886d9]" />
-          Recently Published Dashboards
+          Your Shared Dashboards
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -49,9 +50,14 @@ export function RecentDashboards() {
               className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg hover:shadow-sm transition-shadow"
             >
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 truncate">{dashboard.title}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="font-medium text-gray-900 truncate">{dashboard.title}</p>
+                  {dashboard.isPasswordProtected && (
+                    <Lock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                  )}
+                </div>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Published {new Date(dashboard.publishedAt).toLocaleDateString('en-US', {
+                  Shared {new Date(dashboard.publishedAt).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
@@ -75,7 +81,7 @@ export function RecentDashboards() {
                   ) : (
                     <>
                       <Copy className="h-3 w-3 mr-1" />
-                      Copy
+                      Copy Link
                     </>
                   )}
                 </Button>
@@ -93,7 +99,7 @@ export function RecentDashboards() {
           ))}
         </div>
         <p className="text-xs text-gray-500 mt-4">
-          These links are saved on this computer. The dashboards themselves are online and accessible from any device.
+          This list is private to you.
         </p>
       </CardContent>
     </Card>

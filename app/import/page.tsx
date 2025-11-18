@@ -15,6 +15,8 @@ import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Sparkles, Database,
 import { AppNav } from "@/components/ui/AppNav";
 import { generateDemoData } from "@/lib/demo/generate-demo";
 import { RecentDashboards } from "@/components/RecentDashboards";
+import { AddressInput } from "@/components/geo/AddressInput";
+import type { Coordinates } from "@/lib/geo/geocoding";
 
 interface FileState {
   file: File;
@@ -35,7 +37,15 @@ interface FileState {
 export default function UploadPage() {
   const [files, setFiles] = useState<FileState[]>([]);
   const [currentFileIndex, setCurrentFileIndex] = useState<number | null>(null);
+  const [primaryGivingType, setPrimaryGivingType] = useState<string>("");
+  const [synagogueAddress, setSynagogueAddress] = useState<string>("");
+  const [synagogueCoords, setSynagogueCoords] = useState<Coordinates | null>(null);
   const router = useRouter();
+
+  const handleAddressSelect = (address: string, coords: Coordinates) => {
+    setSynagogueAddress(address);
+    setSynagogueCoords(coords);
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
@@ -211,7 +221,16 @@ export default function UploadPage() {
             min: txnFile.transactionData.dateRange.min.toISOString(),
             max: txnFile.transactionData.dateRange.max.toISOString(),
           } : null,
+          primaryGivingType: primaryGivingType || null,
         }));
+
+        // Save synagogue address and coords to localStorage (persists across sessions)
+        if (synagogueAddress.trim()) {
+          localStorage.setItem("bimah_bc_synagogue_address", synagogueAddress.trim());
+          if (synagogueCoords) {
+            localStorage.setItem("bimah_bc_synagogue_coords", JSON.stringify(synagogueCoords));
+          }
+        }
 
         // Clear legacy data
         sessionStorage.removeItem("pledgeData");
@@ -273,13 +292,10 @@ export default function UploadPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
             <div className="text-sm text-green-900">
-              <strong className="font-semibold">Your data stays private:</strong> All processing happens in your browser. Nothing is uploaded unless you choose to publish with anonymized data only.
+              <strong className="font-semibold">Your data stays private:</strong> All processing happens in your browser. Nothing is uploaded unless you choose to share, and only anonymized data is included.
             </div>
           </div>
         </div>
-
-        {/* Recent Dashboards */}
-        <RecentDashboards />
 
         {files.length === 0 ? (
           <Card className="border-0 shadow-lg shadow-blue-100/50 bg-white/70 backdrop-blur-sm">
@@ -446,6 +462,43 @@ export default function UploadPage() {
                                 </span>
                               ))}
                             </div>
+                          </div>
+                        </div>
+
+                        {/* Configuration Options */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                          {/* Primary Giving Type */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">
+                              Primary Membership/Pledge Type
+                              <span className="text-xs text-muted-foreground ml-1">(optional)</span>
+                            </label>
+                            <select
+                              value={primaryGivingType}
+                              onChange={(e) => setPrimaryGivingType(e.target.value)}
+                              className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                            >
+                              <option value="">None - use generic "giving" terminology</option>
+                              {currentFile.transactionData.chargeTypes.map((ct) => (
+                                <option key={ct} value={ct}>{ct}</option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-muted-foreground">
+                              If selected, this charge type will use "pledge" terminology and show pledge-specific insights.
+                            </p>
+                          </div>
+
+                          {/* Synagogue Address */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">
+                              Synagogue Location
+                              <span className="text-xs text-muted-foreground ml-1">(optional, for distance analysis)</span>
+                            </label>
+                            <AddressInput
+                              onAddressSelect={handleAddressSelect}
+                              defaultAddress={synagogueAddress}
+                              defaultCoords={synagogueCoords || undefined}
+                            />
                           </div>
                         </div>
 
@@ -696,6 +749,9 @@ export default function UploadPage() {
             </div>
           </div>
         )}
+
+        {/* Your Shared Dashboards - shown at bottom */}
+        <RecentDashboards />
       </div>
     </div>
   );

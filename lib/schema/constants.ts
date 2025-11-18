@@ -11,11 +11,11 @@ export const FISCAL_YEAR = {
  * Pledge bin definitions [inclusive lower, exclusive upper) except last bin
  */
 export const PLEDGE_BINS = [
-  { label: "$1-$1,799", min: 1, max: 1800 },
-  { label: "$1,800-$2,499", min: 1800, max: 2500 },
-  { label: "$2,500-$3,599", min: 2500, max: 3600 },
-  { label: "$3,600-$5,399", min: 3600, max: 5400 },
-  { label: "$5,400+", min: 5400, max: Infinity },
+  { label: "$1-$1.8k", min: 1, max: 1800 },
+  { label: "$1.8k-$2.5k", min: 1800, max: 2500 },
+  { label: "$2.5k-$3.6k", min: 2500, max: 3600 },
+  { label: "$3.6k-$5.4k", min: 3600, max: 5400 },
+  { label: "$5.4k+", min: 5400, max: Infinity },
 ] as const;
 
 /**

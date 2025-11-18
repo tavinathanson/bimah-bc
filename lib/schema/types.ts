@@ -138,3 +138,144 @@ export type AnalysisMode = z.infer<typeof AnalysisMode>;
  */
 export const DataSourceType = z.enum(["legacy-pledges", "transactions"]);
 export type DataSourceType = z.infer<typeof DataSourceType>;
+
+/**
+ * Per-year metrics for time-series analysis
+ */
+export interface YearMetrics {
+  year: number;
+  totalGiving: number;
+  householdCount: number;
+  medianGift: number;
+  avgGift: number;
+  // Distributions
+  byAgeCohort: { cohort: string; total: number; count: number; avg: number }[];
+  byGivingLevel: { level: string; count: number; total: number }[];
+  byChargeType: { type: string; total: number; count: number }[];
+  byTenure: { cohort: string; total: number; count: number; avg: number }[];
+  byZip: { zip: string; total: number; count: number }[];
+}
+
+/**
+ * Household data for the new time-series model
+ * Stores giving per year for flexible analysis
+ */
+export interface HouseholdYearData {
+  accountId: string;
+  age?: number;
+  zip?: string;
+  tenureYears?: number;
+  memberSince?: Date;
+  // Giving by year and charge type
+  givingByYear: Record<number, {
+    total: number;
+    byChargeType: Record<string, number>;
+  }>;
+}
+
+/**
+ * Filter types for the universal filter system
+ */
+export type FilterType =
+  | "ageCohort"
+  | "givingLevel"
+  | "chargeType"
+  | "chargeTypeGroup"
+  | "tenure"
+  | "zip"
+  | "year"
+  | "status"
+  | "changeDirection";
+
+/**
+ * A single filter in the filter stack
+ */
+export interface Filter {
+  id: string;
+  type: FilterType;
+  label: string;
+  value: string | string[] | number | number[];
+}
+
+/**
+ * Filter state with history for back navigation
+ */
+export interface FilterState {
+  stack: Filter[];
+  // Computed from stack - the effective combined filter
+  activeFilters: {
+    ageCohorts?: string[];
+    givingLevels?: string[];
+    chargeTypes?: string[];
+    chargeTypeGroup?: string;
+    tenureCohorts?: string[];
+    zips?: string[];
+    years?: number[];
+    statuses?: string[];
+    changeDirections?: string[];
+  };
+}
+
+/**
+ * Charge type group for bundling related charge types
+ */
+export interface ChargeTypeGroup {
+  id: string;
+  name: string;
+  chargeTypes: string[];
+  isDefault?: boolean;
+}
+
+/**
+ * Predefined charge type groups
+ */
+export const DEFAULT_CHARGE_TYPE_GROUPS: ChargeTypeGroup[] = [
+  {
+    id: "all",
+    name: "All Giving",
+    chargeTypes: [], // Empty means all
+    isDefault: true,
+  },
+];
+
+/**
+ * Contextual insight generated from data
+ */
+export interface Insight {
+  id: string;
+  type: "trend" | "comparison" | "anomaly" | "highlight";
+  severity: "info" | "positive" | "warning" | "negative";
+  title: string;
+  description: string;
+  // Which filters/context this insight applies to
+  relevantFilters?: Partial<FilterState["activeFilters"]>;
+}
+
+/**
+ * Chart data point for clickable charts
+ */
+export interface ChartDataPoint {
+  label: string;
+  value: number;
+  // For creating filter when clicked
+  filterType: FilterType;
+  filterValue: string | number;
+  // Optional styling
+  color?: string;
+}
+
+/**
+ * Giving level bins for distribution charts
+ */
+export const GIVING_LEVELS = [
+  { label: "Under $500", min: 0, max: 500 },
+  { label: "$500-$999", min: 500, max: 1000 },
+  { label: "$1,000-$1,799", min: 1000, max: 1800 },
+  { label: "$1,800-$2,499", min: 1800, max: 2500 },
+  { label: "$2,500-$3,599", min: 2500, max: 3600 },
+  { label: "$3,600-$5,399", min: 3600, max: 5400 },
+  { label: "$5,400-$9,999", min: 5400, max: 10000 },
+  { label: "$10,000+", min: 10000, max: Infinity },
+] as const;
+
+export type GivingLevel = typeof GIVING_LEVELS[number]["label"];

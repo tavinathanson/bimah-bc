@@ -88,6 +88,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
         url: result.url,
         reportId: result.reportId,
         publishedAt: new Date().toISOString(),
+        isPasswordProtected: result.isPasswordProtected,
       });
       // Keep only last 10
       localStorage.setItem("recentDashboards", JSON.stringify(recentDashboards.slice(0, 10)));
@@ -130,7 +131,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">
-              {published ? "Dashboard Published!" : "Publish Dashboard"}
+              {published ? "Link Created!" : "Share Dashboard"}
             </h2>
             <button
               onClick={handleClose}
@@ -281,12 +282,12 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
                   {isPublishing ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Publishing...
+                      Creating link...
                     </>
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2" />
-                      Publish Dashboard
+                      Create Shareable Link
                     </>
                   )}
                 </Button>
@@ -303,13 +304,13 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
                 </div>
 
                 <h3 className="text-center text-xl font-semibold text-gray-900 mb-2">
-                  Dashboard Published!
+                  Your dashboard is ready to share!
                 </h3>
 
                 {/* Save this link */}
                 <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-900">
-                    <strong>Save this link somewhere safe (email it to yourself, save in a doc, etc).</strong> This browser will remember it under "Recently Published", but only on this computer.
+                    <strong>Save this link somewhere safe</strong> (email it to yourself, bookmark it, etc). It will appear in "Your Shared Dashboards" on this computer only.
                   </p>
                 </div>
 

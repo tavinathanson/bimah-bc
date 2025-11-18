@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Upload, Sparkles, Lock, BarChart3, Share2, ArrowRight } from "lucide-react";
 import { generateDemoData } from "@/lib/demo/generate-demo";
-import { enrichRows } from "@/lib/math/calculations";
 import { RecentDashboards } from "@/components/RecentDashboards";
 
 export default function HomePage() {
@@ -13,8 +12,68 @@ export default function HomePage() {
 
   const handleLaunchDemo = () => {
     const demoData = generateDemoData();
-    const enrichedData = enrichRows("demo", demoData);
-    sessionStorage.setItem("pledgeData", JSON.stringify(enrichedData));
+
+    // Convert demo data to transaction format
+    const transactions: Array<{
+      date: string;
+      accountId: string;
+      chargeType: string;
+      amount: number;
+      zip?: string;
+      primaryBirthday?: string;
+    }> = [];
+
+    demoData.forEach((row, index) => {
+      const accountId = `demo-${index.toString().padStart(4, '0')}`;
+
+      // Calculate birthday from age (approximate)
+      const currentYear = new Date().getFullYear();
+      const birthYear = currentYear - (row.age || 50);
+      const birthday = new Date(birthYear, 5, 15).toISOString(); // June 15
+
+      // Prior year transaction
+      if (row.pledgePrior > 0) {
+        transactions.push({
+          date: new Date(currentYear - 1, 6, 1).toISOString(), // July 1 of prior year
+          accountId,
+          chargeType: "Hineini",
+          amount: row.pledgePrior,
+          zip: row.zipCode,
+          primaryBirthday: birthday,
+        });
+      }
+
+      // Current year transaction
+      if (row.pledgeCurrent > 0) {
+        transactions.push({
+          date: new Date(currentYear, 6, 1).toISOString(), // July 1 of current year
+          accountId,
+          chargeType: "Hineini",
+          amount: row.pledgeCurrent,
+          zip: row.zipCode,
+          primaryBirthday: birthday,
+        });
+      }
+
+      // For households with no giving either year, still add a $0 transaction
+      // so they show up in the data (otherwise they'd be invisible)
+      if (row.pledgePrior === 0 && row.pledgeCurrent === 0) {
+        transactions.push({
+          date: new Date(currentYear, 6, 1).toISOString(),
+          accountId,
+          chargeType: "Hineini",
+          amount: 0,
+          zip: row.zipCode,
+          primaryBirthday: birthday,
+        });
+      }
+    });
+
+    sessionStorage.setItem("transactionData", JSON.stringify(transactions));
+    sessionStorage.setItem("transactionMetadata", JSON.stringify({
+      primaryGivingType: "Hineini",
+      fileName: "Demo Data"
+    }));
     router.push("/dashboard");
   };
 
@@ -103,7 +162,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">Privacy-First</h3>
                 <p className="text-gray-600 text-sm">
-                  Your data stays in your browser. Optionally publish anonymized dashboards—no names, ever.
+                  Your data stays in your browser. Optionally share anonymized dashboards—no names, ever.
                 </p>
               </div>
 
@@ -129,7 +188,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">Easy Sharing</h3>
                 <p className="text-gray-600 text-sm">
-                  Publish secure dashboards with a single click. Share the link with your board—no login required.
+                  Create secure links with a single click. Share with your board—no login required.
                 </p>
               </div>
             </div>

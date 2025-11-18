@@ -66,7 +66,7 @@ export function AppNav({ onExport, showExport = false, onPublish, showPublish = 
             </button>
             <div className="border-l border-slate-200 pl-3 md:pl-4 min-w-0">
               <h1 className="text-base md:text-xl font-bold text-slate-800 truncate">
-                {publishedTitle || "Published Dashboard"}
+                {publishedTitle || "Shared Dashboard"}
               </h1>
               <p className="text-muted-foreground text-xs md:text-sm mt-0.5 truncate">
                 {publishedDate ? `Snapshot: ${publishedDate}` : "Read-only view"}
@@ -76,7 +76,7 @@ export function AppNav({ onExport, showExport = false, onPublish, showPublish = 
 
           {/* Right side: Actions */}
           <div className="flex gap-2 flex-wrap">
-            {/* Recently Published Dropdown */}
+            {/* Your Dashboards Dropdown */}
             {!hideRecentDashboards && recentDashboards.length > 0 && (
               <div className="relative">
                 <Button
@@ -85,8 +85,8 @@ export function AppNav({ onExport, showExport = false, onPublish, showPublish = 
                   className="whitespace-nowrap rounded-lg"
                 >
                   <Clock className="h-4 w-4 md:mr-2" />
-                  <span className="hidden sm:inline">Recently Published</span>
-                  <span className="sm:hidden">Recent</span>
+                  <span className="hidden sm:inline">Your Dashboards</span>
+                  <span className="sm:hidden">Dashboards</span>
                   <ChevronDown className="h-3 w-3 ml-1" />
                 </Button>
                 {recentDropdownOpen && (
@@ -209,7 +209,7 @@ export function AppNav({ onExport, showExport = false, onPublish, showPublish = 
 
         {/* Right side: Actions */}
         <div className="flex gap-2 flex-wrap">
-          {/* Recently Published Dropdown */}
+          {/* Your Dashboards Dropdown */}
           {!hideRecentDashboards && recentDashboards.length > 0 && (
             <div className="relative">
               <Button
@@ -218,8 +218,8 @@ export function AppNav({ onExport, showExport = false, onPublish, showPublish = 
                 className="whitespace-nowrap rounded-lg"
               >
                 <Clock className="h-4 w-4 md:mr-2" />
-                <span className="hidden sm:inline">Recently Published</span>
-                <span className="sm:hidden">Recent</span>
+                <span className="hidden sm:inline">Your Dashboards</span>
+                <span className="sm:hidden">Dashboards</span>
                 <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
               {recentDropdownOpen && (
