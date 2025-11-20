@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { generateReportId } from '@/lib/generateReportId';
 import { hashPassword } from '@/lib/password';
+import { validateNoPII, stripPII } from '@/lib/privacy/rules';
 import { z } from 'zod';
 
 /**
@@ -34,6 +35,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { title, snapshotDate, rows, synagogueAddress, synagogueLat, synagogueLng, password } = PublishRequestSchema.parse(body);
 
+    // PRIVACY VALIDATION: Ensure no PII in published data
+    // This is a critical safety check to prevent accidental PII exposure
+    const privacyCheck = validateNoPII(rows);
+    if (!privacyCheck.valid) {
+      console.error('Privacy violation detected:', privacyCheck.violations);
+      return NextResponse.json(
+        {
+          error: 'Privacy violation: Cannot publish data containing personally identifiable information',
+          violations: privacyCheck.violations,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Additional safety: Strip any PII fields as a second layer of defense
+    const sanitizedRows = rows.map(row => stripPII(row));
+
     // Generate unique report ID
     const reportId = generateReportId();
 
@@ -46,9 +64,9 @@ export async function POST(request: NextRequest) {
       VALUES (${reportId}, ${title}, ${snapshotDate}, ${synagogueAddress ?? null}, ${synagogueLat ?? null}, ${synagogueLng ?? null}, ${passwordHash})
     `;
 
-    // Bulk insert rows
+    // Bulk insert rows (using sanitized data)
     // Note: Vercel Postgres supports bulk inserts efficiently
-    for (const row of rows) {
+    for (const row of sanitizedRows) {
       await sql`
         INSERT INTO report_rows (report_id, age, pledge_current, pledge_prior, zip_code)
         VALUES (
