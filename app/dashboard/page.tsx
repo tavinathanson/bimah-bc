@@ -31,6 +31,14 @@ import { hasZipCodeData, aggregateByZipCode, type ZipAggregate } from "@/lib/geo
 import { geocodeZipCode, calculateDistanceFromPoint } from "@/lib/geo/geocoding";
 import { DistanceHistogram } from "@/components/geo/DistanceHistogram";
 
+// NEW: Universal dashboard components
+import { SavedViewSelector } from "@/components/dashboard/SavedViewSelector";
+import { CategorySelector } from "@/components/dashboard/CategorySelector";
+import { FilterChips, type FilterChip } from "@/components/dashboard/FilterChips";
+import { DashboardSection } from "@/components/dashboard/DashboardSection";
+import type { SavedView, DashboardCategory } from "@/lib/dashboard/saved-views";
+import { BETH_CHAIM_HINEINI } from "@/lib/dashboard/official-presets";
+
 const ZipMap = dynamic(() => import("@/components/geo/ZipMap").then(mod => ({ default: mod.ZipMap })), {
   ssr: false,
   loading: () => (
@@ -76,6 +84,10 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
 
   // Published dashboard metadata (only used when isPublishedView is true)
   const [publishedMeta, setPublishedMeta] = useState<{ title: string; snapshotDate: string; reportId: string } | null>(null);
+
+  // NEW: Saved view and category state
+  const [currentViewId, setCurrentViewId] = useState<string>(BETH_CHAIM_HINEINI.id);
+  const [category, setCategory] = useState<DashboardCategory>("hineini");
 
   // Filters - now support multiple selections
   const [filterCohort, setFilterCohort] = useState<string[]>([]);
@@ -331,6 +343,107 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
     return ranges;
   }, [geoAggregates]);
 
+  // NEW: Convert existing filter state to FilterChips format
+  // MUST be here (before early returns) to maintain hook order
+  const activeFilterChips: FilterChip[] = React.useMemo(() => {
+    const chips: FilterChip[] = [];
+
+    // Age cohort filters
+    filterCohort.forEach(cohort => {
+      chips.push({
+        id: `age_${cohort}`,
+        label: cohort,
+        category: "Age",
+        onRemove: () => setFilterCohort(prev => prev.filter(c => c !== cohort)),
+      });
+    });
+
+    // Age custom range
+    if (ageCustomEnabled && (minAge || maxAge)) {
+      const label = minAge && maxAge
+        ? `${minAge}-${maxAge}`
+        : minAge
+        ? `≥${minAge}`
+        : `≤${maxAge}`;
+      chips.push({
+        id: "age_custom",
+        label,
+        category: "Age",
+        onRemove: () => {
+          setMinAge("");
+          setMaxAge("");
+          setAgeCustomEnabled(false);
+        },
+      });
+    }
+
+    // Status filters
+    filterStatus.forEach(status => {
+      chips.push({
+        id: `status_${status}`,
+        label: STATUS_DISPLAY_NAMES[status as StatusValue] || status,
+        category: "Status",
+        onRemove: () => setFilterStatus(prev => prev.filter(s => s !== status)),
+      });
+    });
+
+    // Change direction filters
+    filterChange.forEach(change => {
+      const labels: Record<string, string> = {
+        "increased": "Increased",
+        "decreased": "Decreased",
+        "no-change": "No Change",
+      };
+      chips.push({
+        id: `change_${change}`,
+        label: labels[change] || change,
+        category: "Change",
+        onRemove: () => setFilterChange(prev => prev.filter(c => c !== change)),
+      });
+    });
+
+    // Pledge bin filters
+    filterBin.forEach(bin => {
+      chips.push({
+        id: `bin_${bin}`,
+        label: bin,
+        category: "Pledge Amount",
+        onRemove: () => setFilterBin(prev => prev.filter(b => b !== bin)),
+      });
+    });
+
+    // Pledge custom range
+    if (pledgeMode === "custom" && (minPledge || maxPledge)) {
+      const label = minPledge && maxPledge
+        ? `$${minPledge}-$${maxPledge}`
+        : minPledge
+        ? `≥$${minPledge}`
+        : `≤$${maxPledge}`;
+      chips.push({
+        id: "pledge_custom",
+        label,
+        category: "Pledge Amount",
+        onRemove: () => {
+          setMinPledge("");
+          setMaxPledge("");
+          setPledgeMode("bins");
+        },
+      });
+    }
+
+    // Distance filters
+    filterDistance.forEach(distance => {
+      chips.push({
+        id: `distance_${distance}`,
+        label: `${distance} mi`,
+        category: "Distance",
+        onRemove: () => setFilterDistance(prev => prev.filter(d => d !== distance)),
+      });
+    });
+
+    return chips;
+  }, [filterCohort, filterStatus, filterChange, filterBin, filterDistance, minAge, maxAge, minPledge, maxPledge, pledgeMode, ageCustomEnabled]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -550,6 +663,18 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
 
   const handleDelete = () => {
     setShowDeleteModal(true);
+  };
+
+  // NEW: Handle loading a saved view
+  const handleLoadView = (view: SavedView) => {
+    setCurrentViewId(view.id);
+    setCategory(view.category);
+
+    // Restore filters from the saved view
+    // Note: For now, we keep the existing filter state
+    // In a future iteration, we can map saved filters to the existing filter arrays
+
+    console.log('Loaded view:', view.name);
   };
 
   // Filter chart data to only show selected options when filters are active
@@ -795,6 +920,38 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
             month: 'long',
             day: 'numeric',
           }) : undefined}
+        />
+
+        {/* NEW: Saved View Selector - Only show in non-published mode */}
+        {!isPublishedView && (
+          <SavedViewSelector
+            currentViewId={currentViewId}
+            onLoadView={handleLoadView}
+          />
+        )}
+
+        {/* NEW: Category Selector - Only show in non-published mode */}
+        {!isPublishedView && (
+          <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/30 border border-blue-100 rounded-lg p-4">
+            <CategorySelector
+              value={category}
+              onChange={setCategory}
+            />
+            {category !== "hineini" && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-sm text-yellow-800">
+                  <strong>Coming Soon:</strong> This category is under development.
+                  For now, only the Hineini (Two-Year Pledge Comparison) dashboard is available.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* NEW: Active Filter Chips - Show in both published and non-published mode */}
+        <FilterChips
+          filters={activeFilterChips}
+          onClearAll={clearFilters}
         />
 
         {/* Published Dashboard Info Banner */}
@@ -1427,7 +1584,11 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+            <DashboardSection
+              title="Overview"
+              subtitle="Key metrics at a glance"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
           <Card className={`border-0 shadow-lg hover:shadow-xl transition-all duration-300 ${hasActiveFilters ? "ring-2 ring-blue-400/50 ring-offset-2" : ""}`}>
             <CardHeader className="py-5 md:py-6">
               <CardDescription className="text-xs md:text-sm mb-2 font-medium text-slate-600">Total Households</CardDescription>
@@ -1504,7 +1665,13 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
             </CardHeader>
           </Card>
         </div>
+            </DashboardSection>
 
+            <DashboardSection
+              title="Analysis & Visualizations"
+              subtitle="Interactive charts and geographic distribution"
+              collapsible={true}
+            >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
           {showStatusChart && (
             <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
@@ -1833,7 +2000,13 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
             </Card>
           )}
         </div>
+            </DashboardSection>
 
+            <DashboardSection
+              title="Detailed Metrics"
+              subtitle="In-depth breakdown by age cohort and pledge amount"
+              collapsible={true}
+            >
         <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Age Cohort Metrics</CardTitle>
@@ -1953,6 +2126,7 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
             </div>
           </CardContent>
         </Card>
+            </DashboardSection>
           </>
         )}
       </div>
