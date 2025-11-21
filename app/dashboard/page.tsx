@@ -36,8 +36,13 @@ import { SavedViewSelector } from "@/components/dashboard/SavedViewSelector";
 import { CategorySelector } from "@/components/dashboard/CategorySelector";
 import { FilterChips, type FilterChip } from "@/components/dashboard/FilterChips";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
+import { ChartCard } from "@/components/dashboard/ChartCard";
+import { InteractiveBarChart } from "@/components/dashboard/InteractiveBarChart";
+import { InteractivePieChart } from "@/components/dashboard/InteractivePieChart";
+import { MetricCard } from "@/components/dashboard/MetricCard";
 import type { SavedView, DashboardCategory } from "@/lib/dashboard/saved-views";
 import { BETH_CHAIM_HINEINI } from "@/lib/dashboard/official-presets";
+import { shouldHideChart } from "@/lib/dashboard/chart-utils";
 
 const ZipMap = dynamic(() => import("@/components/geo/ZipMap").then(mod => ({ default: mod.ZipMap })), {
   ssr: false,
@@ -1674,231 +1679,143 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
             >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
           {showStatusChart && (
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Pledge Status Distribution</CardTitle>
-                <CardDescription className="text-xs font-medium text-slate-500">
-                  {filteredData.length} of {data.length} Households
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {statusChartData.length === 0 || statusChartData.every(d => d.value === 0) ? (
-                  <div className="h-[220px] md:h-[250px] flex items-center justify-center text-center p-4">
-                    <div className="text-muted-foreground">
-                      <p className="font-medium">No households match the current filters</p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <ResponsiveContainer width="100%" height={220} className="md:!h-[250px]">
-                      <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-                        <Pie
-                          data={statusChartData}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          label
-                          onClick={(data) => {
-                            // Map display name back to status value
-                            const status = DISPLAY_NAME_TO_STATUS[data.name];
-                            if (status) {
-                              // Set filter to just this status (drill down)
-                              setFilterStatus([status]);
-                            }
-                          }}
-                          cursor="pointer"
-                        >
-                          {statusChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<CustomChartTooltip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-
-                    {/* Custom Legend */}
-                    <div className="flex flex-wrap justify-center gap-3 md:gap-4 mt-4">
-                      {statusChartData.map((entry, index) => (
-                        <button
-                          key={entry.name}
-                          onClick={() => {
-                            const status = DISPLAY_NAME_TO_STATUS[entry.name];
-                            if (status) {
-                              // Set filter to just this status (drill down)
-                              setFilterStatus([status]);
-                            }
-                          }}
-                          className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
-                        >
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                          />
-                          <span className="text-sm">{entry.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <ChartCard
+              title="Pledge Status Distribution"
+              subtitle={`${filteredData.length} of ${data.length} Households`}
+              description="Click a slice to filter by that status"
+              isEmpty={statusChartData.length === 0 || statusChartData.every(d => d.value === 0)}
+              isHidden={shouldHideChart("pie", statusChartData)}
+              hiddenMessage="Chart hidden: only one status remains after filtering"
+              height={280}
+            >
+              <InteractivePieChart
+                data={statusChartData}
+                dataKey="value"
+                nameKey="name"
+                colors={COLORS}
+                onChartClick={(filter) => {
+                  // Map display name back to status value
+                  if (typeof filter.value === "string") {
+                    const status = DISPLAY_NAME_TO_STATUS[filter.value];
+                    if (status) {
+                      setFilterStatus([status]);
+                    }
+                  }
+                }}
+                clickHandler={{
+                  field: "status",
+                  category: "Status",
+                  getLabel: (value: string) => value,
+                }}
+              />
+            </ChartCard>
           )}
 
           {showChangeChart && (
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Renewed Pledge Changes</CardTitle>
-                <CardDescription className="text-xs font-medium text-slate-500">
-                  {filteredData.filter(r => r.status === "renewed").length} Renewed of {filteredData.length} Households
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {changeData.every(d => d.value === 0) ? (
-                  <div className="h-[250px] md:h-[300px] flex items-center justify-center text-center p-4">
-                    <div className="text-muted-foreground">
-                      <p className="font-medium mb-2">No renewed households to display</p>
-                      <p className="text-sm">
-                        {filteredData.length === 0
-                          ? "No households match the current filters"
-                          : "Only renewed households (pledged in both years) show change direction"}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
-                    <BarChart data={changeData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip content={<CustomChartTooltip />} />
-                      <Bar
-                        dataKey="value"
-                        fill="#0e69bb"
-                        name="Households"
-                        onClick={(data) => {
-                          const changeMap: Record<string, string> = {
-                            "Increased": "increased",
-                            "Decreased": "decreased",
-                            "No Change": "no-change"
-                          };
-                          const change = changeMap[data.name];
-                          if (change) {
-                            // Set filter to just this change direction (drill down)
-                            setFilterChange([change]);
-                          }
-                        }}
-                        cursor="pointer"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
+            <ChartCard
+              title="Renewed Pledge Changes"
+              subtitle={`${filteredData.filter(r => r.status === "renewed").length} Renewed of ${filteredData.length} Households`}
+              description="Click a bar to filter by change direction"
+              isEmpty={changeData.every(d => d.value === 0)}
+              isHidden={shouldHideChart("bar", changeData)}
+              hiddenMessage="Chart hidden: only one change direction remains after filtering"
+              height={300}
+            >
+              <InteractiveBarChart
+                data={changeData}
+                xKey="name"
+                dataKey="value"
+                colors={["#0e69bb"]}
+                onChartClick={(filter) => {
+                  // Map display name to internal value
+                  const changeMap: Record<string, string> = {
+                    "Increased": "increased",
+                    "Decreased": "decreased",
+                    "No Change": "no-change"
+                  };
+                  if (typeof filter.value === "string") {
+                    const internalValue = changeMap[filter.value];
+                    if (internalValue) {
+                      setFilterChange([internalValue]);
+                    }
+                  }
+                }}
+                clickHandler={{
+                  field: "pledgeChange",
+                  category: "Change",
+                  getLabel: (value: string) => value,
+                }}
+              />
+            </ChartCard>
           )}
 
           {showCohortChart && (
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Households by Age Cohort</CardTitle>
-                <CardDescription className="text-xs font-medium text-slate-500">
-                  {filteredData.length} of {data.length} Households
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {cohortChartData.length === 0 || cohortChartData.every(d => d.Households === 0) ? (
-                  <div className="h-[250px] md:h-[300px] flex items-center justify-center text-center p-4">
-                    <div className="text-muted-foreground">
-                      <p className="font-medium">No households match the current filters</p>
-                    </div>
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
-                    <BarChart data={cohortChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip content={<CustomChartTooltip />} />
-                      <Bar
-                        dataKey="Households"
-                        fill="#1886d9"
-                        onClick={(data) => {
-                          // Set filter to just this cohort (drill down)
-                          setFilterCohort([data.name]);
-                          // Clear custom age range when selecting a cohort
-                          setAgeCustomEnabled(false);
-                          setMinAge("");
-                          setMaxAge("");
-                        }}
-                        cursor="pointer"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
+            <ChartCard
+              title="Households by Age Cohort"
+              subtitle={`${filteredData.length} of ${data.length} Households`}
+              description="Click a bar to filter by that age group"
+              isEmpty={cohortChartData.length === 0 || cohortChartData.every(d => d.Households === 0)}
+              isHidden={shouldHideChart("bar", cohortChartData)}
+              hiddenMessage="Chart hidden: only one age cohort remains after filtering"
+              height={300}
+            >
+              <InteractiveBarChart
+                data={cohortChartData}
+                xKey="name"
+                dataKey="Households"
+                colors={["#1886d9"]}
+                onChartClick={(filter) => {
+                  // Extract cohort value from filter and update state
+                  if (typeof filter.value === "string") {
+                    setFilterCohort([filter.value]);
+                    // Clear custom age range when selecting a cohort
+                    setAgeCustomEnabled(false);
+                    setMinAge("");
+                    setMaxAge("");
+                  }
+                }}
+                clickHandler={{
+                  field: "ageCohort",
+                  category: "Age",
+                  getLabel: (value: string) => value,
+                }}
+              />
+            </ChartCard>
           )}
 
           {showBinChart && (
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg md:text-xl font-bold text-slate-800">Households by Pledge Bin</CardTitle>
-                <CardDescription className="text-xs font-medium text-slate-500">
-                  {filteredData.filter(r => r.pledgeCurrent > 0).length} with Pledges &gt; $0 of {filteredData.length} Households
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {binChartData.length === 0 ? (
-                  <div className="h-[250px] md:h-[300px] flex items-center justify-center text-center p-4">
-                    <div className="text-muted-foreground">
-                      <p className="font-medium mb-2">No pledges &gt; $0 to display</p>
-                      <p className="text-sm">
-                        {filteredData.length === 0
-                          ? "No households match the current filters"
-                          : `All ${filteredData.length} households have $0 pledges`}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
-                    <BarChart data={binChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="name"
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        tickFormatter={(value) => {
-                          // Abbreviate bin labels for chart
-                          if (value.includes("$1-")) return "$1-$1.8K";
-                          if (value.includes("$1,800")) return "$1.8K-$2.5K";
-                          if (value.includes("$2,500")) return "$2.5K-$3.6K";
-                          if (value.includes("$3,600")) return "$3.6K-$5.4K";
-                          if (value.includes("$5,400")) return "$5.4K+";
-                          return value;
-                        }}
-                      />
-                      <YAxis />
-                      <Tooltip content={<CustomChartTooltip />} />
-                      <Bar
-                        dataKey="Households"
-                        fill="#e6aa0f"
-                        onClick={(data) => {
-                          // Set filter to just this bin (drill down)
-                          setFilterBin([data.name]);
-                          // Clear custom pledge range when selecting a bin
-                          setPledgeMode("bins");
-                          setMinPledge("");
-                          setMaxPledge("");
-                        }}
-                        cursor="pointer"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
+            <ChartCard
+              title="Households by Pledge Bin"
+              subtitle={`${filteredData.filter(r => r.pledgeCurrent > 0).length} with Pledges > $0 of ${filteredData.length} Households`}
+              description="Click a bar to filter by that pledge range"
+              isEmpty={binChartData.length === 0}
+              isHidden={shouldHideChart("bar", binChartData)}
+              hiddenMessage="Chart hidden: only one pledge bin remains after filtering"
+              height={300}
+            >
+              <InteractiveBarChart
+                data={binChartData}
+                xKey="name"
+                dataKey="Households"
+                colors={["#e6aa0f"]}
+                xAxisAngle={-45}
+                onChartClick={(filter) => {
+                  // Extract bin value from filter and update state
+                  if (typeof filter.value === "string") {
+                    setFilterBin([filter.value]);
+                    // Clear custom pledge range when selecting a bin
+                    setPledgeMode("bins");
+                    setMinPledge("");
+                    setMaxPledge("");
+                  }
+                }}
+                clickHandler={{
+                  field: "pledgeBin",
+                  category: "Pledge Amount",
+                  getLabel: (value: string) => value,
+                }}
+              />
+            </ChartCard>
           )}
 
           {/* Geographic Map Card */}
