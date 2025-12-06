@@ -30,7 +30,7 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.460.0",
     "nanoid": "^5.1.6",
-    "next": "^16.0.1",
+    "next": "^16.0.7",
     "numeral": "^2.0.6",
     "postgres": "^3.4.7",
     "react": "^19.0.0",
