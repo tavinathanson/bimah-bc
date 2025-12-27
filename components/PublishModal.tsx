@@ -37,8 +37,8 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
     setTitleError("");
 
     // Validate password if enabled
-    if (enablePassword && password.length < 4) {
-      setPasswordError("Password must be at least 4 characters");
+    if (enablePassword && password.length < 8) {
+      setPasswordError("Password must be at least 8 characters");
       return;
     }
     setPasswordError("");
@@ -203,7 +203,7 @@ export function PublishModal({ isOpen, onClose, data }: PublishModalProps) {
                           setPassword(e.target.value);
                           if (passwordError) setPasswordError("");
                         }}
-                        placeholder="Enter password (min 4 characters)"
+                        placeholder="Enter password (min 8 characters)"
                         className={`w-full pr-10 ${passwordError ? "border-red-500" : ""}`}
                         maxLength={100}
                         disabled={isPublishing}

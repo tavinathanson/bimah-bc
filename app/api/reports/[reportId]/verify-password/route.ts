@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { verifyPassword } from '@/lib/password';
+import { checkRateLimit, recordFailedAttempt, clearAttempts } from '@/lib/rate-limit';
 import { z } from 'zod';
 import type { RawRow } from '@/lib/schema/types';
 
@@ -25,6 +26,15 @@ export async function POST(
       return NextResponse.json(
         { error: 'Invalid report ID' },
         { status: 400 }
+      );
+    }
+
+    // Check rate limit
+    const rateLimit = checkRateLimit(reportId);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many attempts. Try again later.', retryAfter: rateLimit.retryAfter },
+        { status: 429 }
       );
     }
 
@@ -60,11 +70,14 @@ export async function POST(
     const isValid = verifyPassword(password, password_hash);
 
     if (!isValid) {
+      recordFailedAttempt(reportId);
       return NextResponse.json(
         { error: 'Incorrect password', valid: false },
         { status: 401 }
       );
     }
+
+    clearAttempts(reportId);
 
     // Password verified - fetch and return the actual report data
     const rowsResult = await sql`

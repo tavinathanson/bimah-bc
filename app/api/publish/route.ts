@@ -19,7 +19,7 @@ const PublishRequestSchema = z.object({
   synagogueAddress: z.string().optional(),
   synagogueLat: z.number().optional(),
   synagogueLng: z.number().optional(),
-  password: z.string().min(4).max(100).optional(),
+  password: z.string().min(8).max(100).optional(),
 });
 
 /**
