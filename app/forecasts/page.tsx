@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PledgeRow } from "@/lib/schema/types";
-import { TrendingUp, AlertTriangle, Users, DollarSign, Target, Calendar, LineChart } from "lucide-react";
+import { TrendingUp, AlertTriangle, Users, DollarSign, Target, Calendar, LineChart, FlaskConical } from "lucide-react";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, LineChart as RechartsLineChart, Line, ComposedChart } from "recharts";
 import { AppNav } from "@/components/ui/AppNav";
+import { ExperimentalNotice, ExperimentalSectionNav } from "@/components/experimental/ExperimentalNav";
+
+const STORAGE_KEY = "experimental-acknowledged";
 
 interface ForecastMetrics {
   nextYearProjection: {
@@ -167,6 +170,12 @@ export default function ForecastsPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Check for acknowledgement
+    if (sessionStorage.getItem(STORAGE_KEY) !== "true") {
+      router.push("/experimental?tab=forecasts");
+      return;
+    }
+
     const stored = sessionStorage.getItem("pledgeData");
     if (!stored) {
       router.push("/import");
@@ -255,32 +264,17 @@ export default function ForecastsPage() {
               Dashboard
             </button>
             <button
-              onClick={() => router.push("/insights")}
-              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-slate-600 hover:bg-slate-100"
+              onClick={() => router.push("/experimental")}
+              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-amber-500 text-white flex items-center gap-1.5"
             >
-              Insights
-            </button>
-            <button
-              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-[#1886d9] text-white"
-            >
-              Forecasts
+              <FlaskConical className="h-3.5 w-3.5" />
+              Experimental
             </button>
           </div>
         </div>
 
-        {/* Warning Banner */}
-        <div className="bg-gradient-to-r from-yellow-50/90 to-amber-50/70 border border-yellow-200/60 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
-            <div className="text-sm">
-              <strong className="text-yellow-900 font-semibold">Note:</strong>{" "}
-              <span className="text-yellow-800">
-                These are statistical projections based on historical patterns. Actual results will vary based on
-                outreach, engagement, and external factors.
-              </span>
-            </div>
-          </div>
-        </div>
+        <ExperimentalNotice />
+        <ExperimentalSectionNav active="forecasts" />
 
         {/* Next Year Revenue Projection */}
         <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">

@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 import { parseDateOfBirth } from "./parser";
 import type { ParseError, RawRow } from "../schema/types";
 import { RawRowSchema } from "../schema/types";
+import { filterNameColumns } from "../privacy/pii-filter";
 
 /**
  * Required columns for ShulCloud format detection
@@ -502,6 +503,7 @@ export function combineShulCloudResults(results: ShulCloudParseResult[]): {
 
 /**
  * Get headers from a file (reused from main parser but needed here for detection)
+ * Note: Name columns are filtered out for privacy
  */
 export async function getShulCloudFileHeaders(file: File): Promise<string[]> {
   try {
@@ -537,7 +539,10 @@ export async function getShulCloudFileHeaders(file: File): Promise<string[]> {
     if (!firstRow) return [];
 
     const headers = Array.isArray(firstRow) ? firstRow : Object.values(firstRow);
-    return headers.map((h) => String(h || "").trim()).filter((h) => h !== "");
+    const allHeaders = headers.map((h) => String(h || "").trim()).filter((h) => h !== "");
+
+    // Filter out name columns for privacy
+    return filterNameColumns(allHeaders);
   } catch {
     return [];
   }

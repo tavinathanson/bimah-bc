@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PledgeRow } from "@/lib/schema/types";
 import { calculateAdvancedInsights } from "@/lib/math/calculations";
-import { TrendingUp, TrendingDown, Users, Target, BarChart3, Award } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, Target, BarChart3, Award, FlaskConical } from "lucide-react";
 import { AppNav } from "@/components/ui/AppNav";
+import { ExperimentalNotice, ExperimentalSectionNav } from "@/components/experimental/ExperimentalNav";
+
+const STORAGE_KEY = "experimental-acknowledged";
 
 export default function InsightsPage() {
   const [data, setData] = useState<PledgeRow[]>([]);
@@ -14,6 +17,12 @@ export default function InsightsPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Check for acknowledgement
+    if (sessionStorage.getItem(STORAGE_KEY) !== "true") {
+      router.push("/experimental?tab=insights");
+      return;
+    }
+
     const stored = sessionStorage.getItem("pledgeData");
     if (!stored) {
       router.push("/import");
@@ -77,18 +86,17 @@ export default function InsightsPage() {
               Dashboard
             </button>
             <button
-              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-[#1886d9] text-white"
+              onClick={() => router.push("/experimental")}
+              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-amber-500 text-white flex items-center gap-1.5"
             >
-              Insights
-            </button>
-            <button
-              onClick={() => router.push("/forecasts")}
-              className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-slate-600 hover:bg-slate-100"
-            >
-              Forecasts
+              <FlaskConical className="h-3.5 w-3.5" />
+              Experimental
             </button>
           </div>
         </div>
+
+        <ExperimentalNotice />
+        <ExperimentalSectionNav active="insights" />
 
         {/* Key Metrics Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">

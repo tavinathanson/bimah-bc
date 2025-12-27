@@ -16,7 +16,7 @@ import {
   getPledgeBin,
 } from "@/lib/math/calculations";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { AlertCircle, Filter, X, ChevronDown, ChevronUp, Info, Check, MapPin, Loader2 } from "lucide-react";
+import { AlertCircle, Filter, X, ChevronDown, ChevronUp, Info, Check, MapPin, Loader2, FlaskConical } from "lucide-react";
 import { generateExcelWorkbook } from "@/lib/export/excelExporter";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -811,7 +811,7 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
           </div>
         )}
 
-        {/* Dashboard Tabs - Hide Insights/Forecasts on published views */}
+        {/* Dashboard Tabs - Hide Experimental on published views */}
         {!isPublishedView && (
           <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-2">
             <div className="flex gap-1">
@@ -826,16 +826,11 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
                 Dashboard
               </button>
               <button
-                onClick={() => router.push("/insights")}
-                className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-slate-600 hover:bg-slate-100"
+                onClick={() => router.push("/experimental")}
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-slate-600 hover:bg-slate-100 flex items-center gap-1.5"
               >
-                Insights
-              </button>
-              <button
-                onClick={() => router.push("/forecasts")}
-                className="px-4 py-2 rounded-lg font-medium text-sm transition-colors text-slate-600 hover:bg-slate-100"
-              >
-                Forecasts
+                <FlaskConical className="h-3.5 w-3.5" />
+                Experimental
               </button>
             </div>
           </div>

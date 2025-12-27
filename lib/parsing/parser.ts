@@ -2,34 +2,43 @@ import * as XLSX from "xlsx";
 import { parse, differenceInYears, isValid } from "date-fns";
 import type { ColumnMapping, ParsedFile, ParseError, RawRow } from "../schema/types";
 import { RawRowSchema } from "../schema/types";
+import {
+  filterSensitiveColumns,
+  sanitizePreviewData,
+  isNameColumn,
+  isDobColumn,
+} from "../privacy/pii-filter";
 
 /**
  * Smart column mapping - guess column names based on common patterns
+ * Note: Name columns are filtered out - they should not be suggested for mapping
  */
 export function guessColumnMapping(headers: string[]): Partial<ColumnMapping> {
   const mapping: Partial<ColumnMapping> = {};
 
-  const normalizedHeaders = headers.map(h => h.toLowerCase().trim());
+  // Filter out name columns before processing - they should never be mapped
+  const filteredHeaders = headers.filter(h => !isNameColumn(h));
+  const normalizedHeaders = filteredHeaders.map(h => h.toLowerCase().trim());
 
   // Age patterns
   const agePatterns = /^(age|years|yrs|member\s*age|donor\s*age)$/i;
   const ageIndex = normalizedHeaders.findIndex(h => agePatterns.test(h));
   if (ageIndex !== -1) {
-    mapping.age = headers[ageIndex];
+    mapping.age = filteredHeaders[ageIndex];
   }
 
   // DOB patterns - look for date of birth, birthday, birthdate, etc.
   const dobPatterns = /^(dob|date\s*of\s*birth|birth\s*date|birthday|birth\s*day|bdate)$/i;
   const dobIndex = normalizedHeaders.findIndex(h => dobPatterns.test(h));
   if (dobIndex !== -1) {
-    mapping.dob = headers[dobIndex];
+    mapping.dob = filteredHeaders[dobIndex];
   }
 
   // ZIP code patterns
   const zipPatterns = /^(zip|zip\s*code|postal|postal\s*code|zipcode)$/i;
   const zipIndex = normalizedHeaders.findIndex(h => zipPatterns.test(h));
   if (zipIndex !== -1) {
-    mapping.zipCode = headers[zipIndex];
+    mapping.zipCode = filteredHeaders[zipIndex];
   }
 
   // Current year pledge patterns - look for current year, "2026", "current", etc.
@@ -41,18 +50,18 @@ export function guessColumnMapping(headers: string[]): Partial<ColumnMapping> {
   );
   const currentIndex = normalizedHeaders.findIndex(h => currentPatterns.test(h));
   if (currentIndex !== -1) {
-    mapping.pledgeCurrent = headers[currentIndex];
+    mapping.pledgeCurrent = filteredHeaders[currentIndex];
   }
 
-  // Prior year pledge patterns
+  // Prior year pledge patterns - skip the column already used for current
   const priorYear = currentYear - 1;
   const priorPatterns = new RegExp(
     `^(${currentYear}|${priorYear}|prior|previous|last|pledge\\s*prior|prior\\s*pledge|last\\s*year|fy${String(currentYear).slice(2)}|fy${currentYear}|fy${String(priorYear).slice(2)}|fy${priorYear})$`,
     'i'
   );
-  const priorIndex = normalizedHeaders.findIndex(h => priorPatterns.test(h));
+  const priorIndex = normalizedHeaders.findIndex((h, idx) => idx !== currentIndex && priorPatterns.test(h));
   if (priorIndex !== -1) {
-    mapping.pledgePrior = headers[priorIndex];
+    mapping.pledgePrior = filteredHeaders[priorIndex];
   }
 
   // If we found a "2026" column for current, look for "2025" for prior
@@ -61,7 +70,7 @@ export function guessColumnMapping(headers: string[]): Partial<ColumnMapping> {
     if (match2026 !== -1) {
       const match2025 = normalizedHeaders.findIndex(h => h === '2025');
       if (match2025 !== -1) {
-        mapping.pledgePrior = headers[match2025];
+        mapping.pledgePrior = filteredHeaders[match2025];
       }
     }
   }
@@ -460,9 +469,21 @@ export async function parseFile(
 }
 
 /**
- * Get column headers from a file for mapping UI
+ * Result from getFileHeaders including both general and DOB-specific headers
  */
-export async function getFileHeaders(file: File): Promise<string[]> {
+export interface FileHeadersResult {
+  /** Headers for general mapping (Zip, Pledge columns) - excludes name and DOB columns */
+  headers: string[];
+  /** DOB column headers only - for the Age/DOB dropdown */
+  dobHeaders: string[];
+}
+
+/**
+ * Get column headers from a file for mapping UI
+ * Returns both general headers (no names, no DOB) and DOB headers separately
+ * This allows the Age/DOB dropdown to show DOB columns while other dropdowns don't
+ */
+export async function getFileHeaders(file: File): Promise<FileHeadersResult> {
   try {
     const arrayBuffer = await file.arrayBuffer();
     let workbook: XLSX.WorkBook;
@@ -479,10 +500,10 @@ export async function getFileHeaders(file: File): Promise<string[]> {
     }
 
     const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) return [];
+    if (!firstSheetName) return { headers: [], dobHeaders: [] };
 
     const worksheet = workbook.Sheets[firstSheetName];
-    if (!worksheet) return [];
+    if (!worksheet) return { headers: [], dobHeaders: [] };
 
     const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
       header: 1,
@@ -490,21 +511,30 @@ export async function getFileHeaders(file: File): Promise<string[]> {
       blankrows: false,
     });
 
-    if (jsonData.length === 0) return [];
+    if (jsonData.length === 0) return { headers: [], dobHeaders: [] };
 
     const firstRow = jsonData[0];
-    if (!firstRow) return [];
+    if (!firstRow) return { headers: [], dobHeaders: [] };
 
     // When using header: 1, SheetJS returns arrays
-    const headers = Array.isArray(firstRow) ? firstRow : Object.values(firstRow);
-    return headers.map((h) => String(h || "").trim()).filter((h) => h !== "");
+    const rawHeaders = Array.isArray(firstRow) ? firstRow : Object.values(firstRow);
+    const allHeaders = rawHeaders.map((h) => String(h || "").trim()).filter((h) => h !== "");
+
+    // Filter out sensitive columns (name + DOB) for general use
+    const headers = filterSensitiveColumns(allHeaders);
+
+    // Extract DOB columns separately for the Age/DOB dropdown
+    const dobHeaders = allHeaders.filter((h) => isDobColumn(h));
+
+    return { headers, dobHeaders };
   } catch {
-    return [];
+    return { headers: [], dobHeaders: [] };
   }
 }
 
 /**
  * Preview first N rows from a file for validation UI
+ * Note: For privacy, name columns are stripped and DOB columns are converted to age
  */
 export async function previewFile(
   file: File,
@@ -536,7 +566,10 @@ export async function previewFile(
       blankrows: false,
     });
 
-    return jsonData.slice(0, limit);
+    const rawPreview = jsonData.slice(0, limit);
+
+    // Sanitize preview data for privacy: strip names, convert DOB to age
+    return sanitizePreviewData(rawPreview);
   } catch {
     return [];
   }

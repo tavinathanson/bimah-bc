@@ -19,6 +19,7 @@ interface FileState {
   file: File;
   status: "pending" | "mapping" | "validated" | "error";
   headers: string[];
+  dobHeaders: string[]; // DOB columns for Age/DOB dropdown only
   mapping?: ColumnMapping;
   parsed?: ParsedFile;
   preview?: Record<string, unknown>[];
@@ -46,8 +47,10 @@ export default function UploadPage() {
 
       // Get headers from first file to detect format
       const firstFile = acceptedFiles[0];
-      const headers = await getFileHeaders(firstFile);
-      const detection = detectShulCloudFormat(headers);
+      const { headers, dobHeaders } = await getFileHeaders(firstFile);
+      // For format detection, include DOB headers (ShulCloud uses "Primary's Birthday")
+      const allHeaders = [...headers, ...dobHeaders];
+      const detection = detectShulCloudFormat(allHeaders);
 
       // If format already set, check for mixing
       if (importFormat !== null) {
@@ -99,14 +102,17 @@ export default function UploadPage() {
   const processFilesAsStandard = async (acceptedFiles: File[]) => {
     const newFiles = await Promise.all(
       acceptedFiles.map(async (file) => {
-        const headers = await getFileHeaders(file);
+        const { headers, dobHeaders } = await getFileHeaders(file);
         const preview = await previewFile(file, 25);
-        const guessedMapping = guessColumnMapping(headers);
+        // For column mapping, include DOB headers so they can be auto-detected
+        const allHeaders = [...headers, ...dobHeaders];
+        const guessedMapping = guessColumnMapping(allHeaders);
 
         return {
           file,
           status: "mapping" as const,
           headers,
+          dobHeaders,
           preview,
           mapping: guessedMapping as ColumnMapping,
         };
@@ -123,7 +129,7 @@ export default function UploadPage() {
   const processFilesAsShulCloud = async (acceptedFiles: File[]) => {
     const newFiles = await Promise.all(
       acceptedFiles.map(async (file) => {
-        const headers = await getFileHeaders(file);
+        const { headers, dobHeaders } = await getFileHeaders(file);
         const preview = await previewFile(file, 25);
         const result = await parseShulCloudFile(file);
 
@@ -131,6 +137,7 @@ export default function UploadPage() {
           file,
           status: (result.errors.length === 0 ? "validated" : "error") as "validated" | "error",
           headers,
+          dobHeaders,
           preview,
           shulcloudResult: result,
           // Create a pseudo-parsed structure for compatibility
@@ -189,8 +196,10 @@ export default function UploadPage() {
       // Small delay to ensure state is cleared
       setTimeout(async () => {
         const firstFile = rawFiles[0];
-        const headers = await getFileHeaders(firstFile);
-        const detection = detectShulCloudFormat(headers);
+        const { headers, dobHeaders } = await getFileHeaders(firstFile);
+        // For format detection, include DOB headers (ShulCloud uses "Primary's Birthday")
+        const allHeaders = [...headers, ...dobHeaders];
+        const detection = detectShulCloudFormat(allHeaders);
 
         if (detection.confidence === "high" || detection.confidence === "partial") {
           setFormatDetection(detection);
@@ -670,6 +679,12 @@ export default function UploadPage() {
                           }}
                         >
                           <option value="">Select column...</option>
+                          {/* Show DOB columns first, then general headers with Age */}
+                          {currentFile.dobHeaders.map((h) => (
+                            <option key={h} value={h}>
+                              {h}
+                            </option>
+                          ))}
                           {currentFile.headers.map((h) => (
                             <option key={h} value={h}>
                               {h}
