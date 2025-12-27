@@ -42,9 +42,21 @@ When you import a ShulCloud export, Bimah automatically:
 2. **Filters for Hineini** - Only processes rows where the Type column contains "hineini" (case-insensitive)
 3. **Extracts fiscal years** - Looks for year codes like "25" or "26" in the Type column (e.g., "Hineini 25" = fiscal year 2025)
 4. **Groups by Account ID** - Combines all transactions for the same household
-5. **Sums amounts** - If a household has multiple transactions in the same fiscal year, amounts are summed
+5. **Sums amounts** - If a household has multiple transactions in the same fiscal year, amounts are summed (including negative values for credits/refunds)
 6. **Calculates age** - Converts Primary's Birthday to current age
 7. **Uses two most recent years** - For year-over-year comparison charts
+
+## Multi-File Imports
+
+You can import ShulCloud data from multiple files. This is useful when:
+
+- You have separate exports for different fiscal years
+- You need to combine data from different time periods
+
+When importing multiple files, Bimah will:
+- Combine data by Account ID across all files
+- Merge transactions for the same account and fiscal year
+- Validate that at least 2 fiscal years are present across all files combined
 
 ## Example Type Values
 
@@ -90,9 +102,12 @@ The fiscal year must appear as a 2-digit number in the Type column:
 
 Make sure each Hineini transaction has a 2-digit year in the Type column. Check that the Type value looks like "Hineini 25" not just "Hineini".
 
-### "Only 1 fiscal year found" error
+### "Only 1 fiscal year found" / "Need Another Fiscal Year"
 
-Bimah requires at least 2 years of data for year-over-year analysis. Expand your export date range to include transactions from a second fiscal year.
+Bimah requires at least 2 years of data for year-over-year analysis. You can fix this by:
+
+1. **Expand your export date range** - Re-export from ShulCloud with a wider date range that includes transactions from two fiscal years
+2. **Import multiple files** - Import separate files for each fiscal year (e.g., one file for FY25, another for FY26). Bimah will automatically combine them by Account ID
 
 ### "Invalid or missing birthday" error
 
