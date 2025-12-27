@@ -88,7 +88,7 @@ export default function HomePage() {
 
           {/* Recent Dashboards - Above feature cards for visibility */}
           <div className="mt-16 max-w-5xl mx-auto">
-            <RecentDashboards />
+            <RecentDashboards showPrivacyNote />
           </div>
 
           {/* Feature Cards - Angled like old design */}
