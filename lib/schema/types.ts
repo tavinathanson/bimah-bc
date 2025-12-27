@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 /**
+ * Import format types
+ */
+export type ImportFormat = "standard" | "shulcloud";
+
+/**
  * Raw row data from parsed spreadsheet
  */
 export const RawRowSchema = z.object({

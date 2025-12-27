@@ -72,7 +72,7 @@ export function guessColumnMapping(headers: string[]): Partial<ColumnMapping> {
 /**
  * Parse a numeric value from a cell, handling currency symbols, commas, etc.
  */
-function parseNumericValue(value: unknown): number | null {
+export function parseNumericValue(value: unknown): number | null {
   if (typeof value === "number" && !isNaN(value) && isFinite(value)) {
     return value;
   }
@@ -111,7 +111,7 @@ function parseAge(value: unknown): number | null {
  * Parse date of birth and calculate age
  * Accepts various date formats: ISO (YYYY-MM-DD), US (MM/DD/YYYY), Excel serial dates
  */
-function parseDateOfBirth(value: unknown): number | null {
+export function parseDateOfBirth(value: unknown): number | null {
   if (!value) return null;
 
   let date: Date | null = null;

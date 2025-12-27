@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { getFileHeaders, parseFile, previewFile, guessColumnMapping } from "@/lib/parsing/parser";
-import type { ColumnMapping, ParsedFile } from "@/lib/schema/types";
+import { detectShulCloudFormat, parseShulCloudFile, type ShulCloudDetectionResult, type ShulCloudParseResult } from "@/lib/parsing/shulcloud-parser";
+import type { ColumnMapping, ParsedFile, ImportFormat } from "@/lib/schema/types";
 import { enrichRows } from "@/lib/math/calculations";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 import { AppNav } from "@/components/ui/AppNav";
@@ -21,11 +22,17 @@ interface FileState {
   mapping?: ColumnMapping;
   parsed?: ParsedFile;
   preview?: Record<string, unknown>[];
+  // ShulCloud-specific
+  shulcloudResult?: ShulCloudParseResult;
 }
 
 export default function UploadPage() {
   const [files, setFiles] = useState<FileState[]>([]);
   const [currentFileIndex, setCurrentFileIndex] = useState<number | null>(null);
+  const [importFormat, setImportFormat] = useState<ImportFormat | null>(null);
+  const [formatDetection, setFormatDetection] = useState<ShulCloudDetectionResult | null>(null);
+  const [showFormatConfirmation, setShowFormatConfirmation] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const router = useRouter();
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -35,28 +42,168 @@ export default function UploadPage() {
       "text/csv": [".csv"],
     },
     onDrop: async (acceptedFiles) => {
-      const newFiles = await Promise.all(
-        acceptedFiles.map(async (file) => {
-          const headers = await getFileHeaders(file);
-          const preview = await previewFile(file, 25);
-          const guessedMapping = guessColumnMapping(headers);
+      if (acceptedFiles.length === 0) return;
 
-          return {
-            file,
-            status: "mapping" as const,
-            headers,
-            preview,
-            mapping: guessedMapping as ColumnMapping,
-          };
-        })
-      );
+      // Get headers from first file to detect format
+      const firstFile = acceptedFiles[0];
+      const headers = await getFileHeaders(firstFile);
+      const detection = detectShulCloudFormat(headers);
 
-      setFiles((prev) => [...prev, ...newFiles]);
-      if (newFiles.length > 0 && currentFileIndex === null) {
-        setCurrentFileIndex(files.length);
+      // If format already set, check for mixing
+      if (importFormat !== null) {
+        const isNewFileShulCloud = detection.confidence === "high";
+        const formatMismatch =
+          (importFormat === "shulcloud" && !isNewFileShulCloud) ||
+          (importFormat === "standard" && isNewFileShulCloud);
+
+        if (formatMismatch) {
+          // Show error - can't mix formats
+          alert(
+            `You've already added files in ${importFormat === "shulcloud" ? "ShulCloud Transactions" : "standard"} format. ` +
+            `Please use the same format or start over.`
+          );
+          return;
+        }
+      }
+
+      // If no format set yet, detect and potentially confirm
+      if (importFormat === null) {
+        if (detection.confidence === "high") {
+          // ShulCloud detected - ask for confirmation
+          setFormatDetection(detection);
+          setPendingFiles(acceptedFiles);
+          setShowFormatConfirmation(true);
+          return;
+        } else if (detection.confidence === "partial") {
+          // Almost looks like ShulCloud - show warning
+          setFormatDetection(detection);
+          setPendingFiles(acceptedFiles);
+          setShowFormatConfirmation(true);
+          return;
+        } else {
+          // Standard format
+          setImportFormat("standard");
+        }
+      }
+
+      // Process files based on format
+      if (importFormat === "shulcloud") {
+        await processFilesAsShulCloud(acceptedFiles);
+      } else {
+        await processFilesAsStandard(acceptedFiles);
       }
     },
   });
+
+  // Process files as standard format
+  const processFilesAsStandard = async (acceptedFiles: File[]) => {
+    const newFiles = await Promise.all(
+      acceptedFiles.map(async (file) => {
+        const headers = await getFileHeaders(file);
+        const preview = await previewFile(file, 25);
+        const guessedMapping = guessColumnMapping(headers);
+
+        return {
+          file,
+          status: "mapping" as const,
+          headers,
+          preview,
+          mapping: guessedMapping as ColumnMapping,
+        };
+      })
+    );
+
+    setFiles((prev) => [...prev, ...newFiles]);
+    if (newFiles.length > 0 && currentFileIndex === null) {
+      setCurrentFileIndex(files.length);
+    }
+  };
+
+  // Process files as ShulCloud format
+  const processFilesAsShulCloud = async (acceptedFiles: File[]) => {
+    const newFiles = await Promise.all(
+      acceptedFiles.map(async (file) => {
+        const headers = await getFileHeaders(file);
+        const preview = await previewFile(file, 25);
+        const result = await parseShulCloudFile(file);
+
+        return {
+          file,
+          status: (result.errors.length === 0 ? "validated" : "error") as "validated" | "error",
+          headers,
+          preview,
+          shulcloudResult: result,
+          // Create a pseudo-parsed structure for compatibility
+          parsed: {
+            fileName: file.name,
+            rows: result.rows,
+            errors: result.errors,
+          },
+        };
+      })
+    );
+
+    setFiles((prev) => [...prev, ...newFiles]);
+    if (newFiles.length > 0 && currentFileIndex === null) {
+      setCurrentFileIndex(files.length);
+    }
+  };
+
+  // Handle format confirmation
+  const handleConfirmShulCloud = async () => {
+    setImportFormat("shulcloud");
+    setShowFormatConfirmation(false);
+    await processFilesAsShulCloud(pendingFiles);
+    setPendingFiles([]);
+    setFormatDetection(null);
+  };
+
+  const handleConfirmStandard = async () => {
+    setImportFormat("standard");
+    setShowFormatConfirmation(false);
+    await processFilesAsStandard(pendingFiles);
+    setPendingFiles([]);
+    setFormatDetection(null);
+  };
+
+  const handleCancelConfirmation = () => {
+    setShowFormatConfirmation(false);
+    setPendingFiles([]);
+    setFormatDetection(null);
+  };
+
+  const handleResetFormat = async () => {
+    // Get the raw files from current state
+    const rawFiles = files.map((f) => f.file);
+
+    // Clear format and files
+    setImportFormat(null);
+    setFiles([]);
+    setCurrentFileIndex(null);
+    setFormatDetection(null);
+    setShowFormatConfirmation(false);
+    setPendingFiles([]);
+
+    // If we have files, re-trigger format detection with them
+    if (rawFiles.length > 0) {
+      // Small delay to ensure state is cleared
+      setTimeout(async () => {
+        const firstFile = rawFiles[0];
+        const headers = await getFileHeaders(firstFile);
+        const detection = detectShulCloudFormat(headers);
+
+        if (detection.confidence === "high" || detection.confidence === "partial") {
+          setFormatDetection(detection);
+          setPendingFiles(rawFiles);
+          setShowFormatConfirmation(true);
+        } else {
+          // Standard format - process directly
+          setImportFormat("standard");
+          await processFilesAsStandard(rawFiles);
+        }
+      }, 0);
+    }
+  };
 
   const handleMappingChange = (field: keyof ColumnMapping, value: string) => {
     if (currentFileIndex === null) return;
@@ -140,6 +287,60 @@ export default function UploadPage() {
           </div>
         </div>
 
+        {/* Format Confirmation Dialog */}
+        {showFormatConfirmation && formatDetection && (
+          <Card className="border-2 border-blue-300 shadow-lg bg-blue-50/50">
+            <CardContent className="p-6">
+              {formatDetection.confidence === "high" ? (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <FileSpreadsheet className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="font-semibold text-lg text-blue-900">ShulCloud Transactions Export Detected</h3>
+                      <p className="text-sm text-blue-800 mt-1">
+                        This file looks like a ShulCloud Transactions export. We&apos;ll automatically extract Hineini pledges and group them by account.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 justify-end">
+                    <Button variant="outline" onClick={handleConfirmStandard}>
+                      Use Standard Import
+                    </Button>
+                    <Button onClick={handleConfirmShulCloud} className="bg-[#1886d9] hover:bg-[#0e69bb]">
+                      Yes, Import as ShulCloud Transactions
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="font-semibold text-lg text-amber-900">Partial ShulCloud Match</h3>
+                      <p className="text-sm text-amber-800 mt-1">
+                        This file looks similar to a ShulCloud export but is missing some expected columns:
+                      </p>
+                      <ul className="text-sm text-amber-800 mt-2 list-disc list-inside">
+                        {formatDetection.missingColumns.map((col) => (
+                          <li key={col}>{col}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 justify-end">
+                    <Button variant="outline" onClick={handleCancelConfirmation}>
+                      Cancel
+                    </Button>
+                    <Button variant="outline" onClick={handleConfirmStandard}>
+                      Use Standard Import
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Recent Dashboards */}
         <RecentDashboards />
 
@@ -195,7 +396,22 @@ export default function UploadPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
             <div className="space-y-2">
-              <h2 className="font-semibold text-sm md:text-base">Files</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-sm md:text-base">Files</h2>
+                {importFormat && (
+                  <button
+                    onClick={handleResetFormat}
+                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    Change format
+                  </button>
+                )}
+              </div>
+              {importFormat && (
+                <div className="text-xs text-muted-foreground bg-slate-100 rounded px-2 py-1">
+                  Format: {importFormat === "shulcloud" ? "ShulCloud Transactions" : "Standard"}
+                </div>
+              )}
               {files.map((f, idx) => (
                 <button
                   key={idx}
@@ -245,20 +461,74 @@ export default function UploadPage() {
               {currentFile && (
                 <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader>
-                    <CardTitle className="text-lg md:text-xl font-bold text-slate-800 truncate">Configure: {currentFile.file.name}</CardTitle>
+                    <CardTitle className="text-lg md:text-xl font-bold text-slate-800 truncate">
+                      {importFormat === "shulcloud" ? "ShulCloud Transactions: " : "Configure: "}{currentFile.file.name}
+                    </CardTitle>
                     <CardDescription className="text-xs md:text-sm font-medium text-slate-500">
-                      Map columns to required fields
+                      {importFormat === "shulcloud"
+                        ? "Automatically extracting Hineini pledges"
+                        : "Map columns to required fields"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4 md:space-y-6">
-                    {(currentFile.mapping?.age || currentFile.mapping?.dob || currentFile.mapping?.pledgeCurrent || currentFile.mapping?.pledgePrior) && (
+                    {/* ShulCloud Mode - Show status info */}
+                    {importFormat === "shulcloud" && currentFile.shulcloudResult && (
+                      <div className="space-y-4">
+                        {/* Years found info */}
+                        {currentFile.shulcloudResult.yearsFound.length > 0 && (
+                          <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                            <FileSpreadsheet className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-blue-900">
+                              <strong>Fiscal years found:</strong> {currentFile.shulcloudResult.yearsFound.join(", ")}
+                              {currentFile.shulcloudResult.yearsFound.length >= 2 && (
+                                <span className="text-blue-700 ml-2">
+                                  (Using {currentFile.shulcloudResult.yearsFound[0]} as current, {currentFile.shulcloudResult.yearsFound[1]} as prior)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Account count */}
+                        {currentFile.shulcloudResult.accountCount > 0 && currentFile.shulcloudResult.errors.length === 0 && (
+                          <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-green-900">
+                              <strong>{currentFile.shulcloudResult.rows.length} households</strong> extracted from {currentFile.shulcloudResult.accountCount} accounts
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Summing explanation - always show when we have results */}
+                        {currentFile.shulcloudResult.rows.length > 0 && (
+                          <div className="flex items-start gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+                            <svg className="h-4 w-4 text-slate-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div className="text-slate-700">
+                              {currentFile.shulcloudResult.hasNegativeValues ? (
+                                <>All transactions (including credits/refunds) are summed per account per fiscal year.</>
+                              ) : (
+                                <>Multiple transactions per account are summed together for each fiscal year.</>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Standard Mode - Show smart mapping notice */}
+                    {importFormat !== "shulcloud" && (currentFile.mapping?.age || currentFile.mapping?.dob || currentFile.mapping?.pledgeCurrent || currentFile.mapping?.pledgePrior) && (
                       <div className="flex items-start gap-2 p-3 bg-[#fcf7c5] border border-[#f2c41e] rounded-lg text-sm">
                         <Sparkles className="h-4 w-4 text-[#c98109] mt-0.5 flex-shrink-0" />
                         <div className="text-[#401e09]">
-                          <strong>Smart mapping applied!</strong> We auto-detected some columns. Please verify they're correct.
+                          <strong>Smart mapping applied!</strong> We auto-detected some columns. Please verify they&apos;re correct.
                         </div>
                       </div>
                     )}
+
+                    {/* Standard Mode - Column Mapping UI */}
+                    {importFormat !== "shulcloud" && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">
@@ -338,6 +608,7 @@ export default function UploadPage() {
                         </Select>
                       </div>
                     </div>
+                    )}
 
                     {currentFile.parsed && (
                       <div className="space-y-4">
@@ -352,7 +623,7 @@ export default function UploadPage() {
                             <div className="space-y-1 text-sm">
                               {currentFile.parsed.errors.slice(0, 10).map((err, idx) => (
                                 <div key={idx}>
-                                  Row {err.row}: {err.message}
+                                  {err.row > 0 ? `Row ${err.row}: ` : ""}{err.message}
                                 </div>
                               ))}
                               {currentFile.parsed.errors.length > 10 && (
@@ -387,7 +658,9 @@ export default function UploadPage() {
                       </div>
                     )}
 
-                    {(currentFile.mapping?.age || currentFile.mapping?.dob) &&
+                    {/* Standard Mode - Validate Button */}
+                    {importFormat !== "shulcloud" &&
+                      (currentFile.mapping?.age || currentFile.mapping?.dob) &&
                       currentFile.mapping?.pledgeCurrent &&
                       currentFile.mapping?.pledgePrior &&
                       !currentFile.parsed && (
