@@ -937,19 +937,11 @@ export default function DashboardPage({ isPublishedView = false }: DashboardPage
 
         {/* NEW: Category Selector - Only show in non-published mode */}
         {!isPublishedView && (
-          <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/30 border border-blue-100 rounded-lg p-4">
+          <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50/30 border border-indigo-200 rounded-xl shadow-sm p-5">
             <CategorySelector
               value={category}
               onChange={setCategory}
             />
-            {category !== "hineini" && (
-              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                <p className="text-sm text-yellow-800">
-                  <strong>Coming Soon:</strong> This category is under development.
-                  For now, only the Hineini (Two-Year Pledge Comparison) dashboard is available.
-                </p>
-              </div>
-            )}
           </div>
         )}
 

@@ -80,6 +80,7 @@ export function InteractiveBarChart({
         <Tooltip content={<UniversalTooltip formatValue={formatValue} />} />
         <Bar
           dataKey={dataKey}
+          name={dataKey}
           fill={colors[0]}
           onClick={handleBarClick}
           cursor={onChartClick ? "pointer" : "default"}
