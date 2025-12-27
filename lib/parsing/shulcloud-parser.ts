@@ -39,6 +39,8 @@ export interface ShulCloudParseResult {
   yearsFound: number[];
   accountCount: number;
   hasNegativeValues: boolean;
+  // Intermediate data for multi-file combining
+  accountData: Map<string, { yearAmounts: Map<number, number>; age: number; zipCode?: string }>;
 }
 
 /**
@@ -185,13 +187,13 @@ export async function parseShulCloudFile(file: File): Promise<ShulCloudParseResu
     const firstSheetName = workbook.SheetNames[0];
     if (!firstSheetName) {
       errors.push({ row: 0, message: "No sheets found in workbook" });
-      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues };
+      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues, accountData: new Map() };
     }
 
     const worksheet = workbook.Sheets[firstSheetName];
     if (!worksheet) {
       errors.push({ row: 0, message: "Could not read worksheet" });
-      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues };
+      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues, accountData: new Map() };
     }
 
     const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
@@ -202,14 +204,14 @@ export async function parseShulCloudFile(file: File): Promise<ShulCloudParseResu
 
     if (jsonData.length === 0) {
       errors.push({ row: 0, message: "File is empty" });
-      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues };
+      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues, accountData: new Map() };
     }
 
     // Get headers
     const firstRow = jsonData[0];
     if (!firstRow) {
       errors.push({ row: 0, message: "Invalid header row format" });
-      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues };
+      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues, accountData: new Map() };
     }
 
     const headers = Array.isArray(firstRow) ? firstRow : Object.values(firstRow);
@@ -238,7 +240,7 @@ export async function parseShulCloudFile(file: File): Promise<ShulCloudParseResu
     }
 
     if (errors.length > 0) {
-      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues };
+      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues, accountData: new Map() };
     }
 
     // Intermediate structure: accountId → { year → totalAmount, age, zip }
@@ -347,24 +349,17 @@ export async function parseShulCloudFile(file: File): Promise<ShulCloudParseResu
         row: 0,
         message: "No valid Hineini transactions found in the file",
       });
-      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues };
+      return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues, accountData: new Map() };
     }
 
-    if (yearsFound.length < 2) {
-      errors.push({
-        row: 0,
-        message: `Only ${yearsFound.length} fiscal year found (${yearsFound[0]}). At least 2 years of data are required for year-to-year comparisons. Please include transactions from an additional fiscal year.`,
-      });
-      return { rows, errors, yearsFound, accountCount: accountData.size, hasNegativeValues };
-    }
+    // Note: We no longer error here if only 1 year is found.
+    // The 2-year requirement is checked at the combined import level,
+    // since users may import multiple files that together have 2+ years.
 
-    // Use the 2 most recent years
-    const currentYear = yearsFound[0];
-    const priorYear = yearsFound[1];
+    // Build simplified accountData for combining (without birthdayRowNum)
+    const simplifiedAccountData = new Map<string, { yearAmounts: Map<number, number>; age: number; zipCode?: string }>();
 
-    // Build output rows
     for (const [accountId, account] of accountData) {
-      // Validate age
       if (account.age === null) {
         errors.push({
           row: account.birthdayRowNum,
@@ -374,43 +369,135 @@ export async function parseShulCloudFile(file: File): Promise<ShulCloudParseResu
         continue;
       }
 
-      const pledgeCurrent = account.yearAmounts.get(currentYear) ?? 0;
-      const pledgePrior = account.yearAmounts.get(priorYear) ?? 0;
-
-      // Validate with Zod schema
-      const parsed = RawRowSchema.safeParse({
+      simplifiedAccountData.set(accountId, {
+        yearAmounts: account.yearAmounts,
         age: account.age,
-        pledgeCurrent,
-        pledgePrior,
         zipCode: account.zipCode,
       });
+    }
 
-      if (!parsed.success) {
-        const issue = parsed.error.issues[0];
-        errors.push({
-          row: account.birthdayRowNum,
-          message: `Account "${accountId}": ${issue?.message || "Validation failed"}`,
+    // If we have 2+ years in this file, we can build rows directly
+    if (yearsFound.length >= 2) {
+      const currentYear = yearsFound[0];
+      const priorYear = yearsFound[1];
+
+      for (const [, account] of simplifiedAccountData) {
+        const pledgeCurrent = account.yearAmounts.get(currentYear) ?? 0;
+        const pledgePrior = account.yearAmounts.get(priorYear) ?? 0;
+
+        const parsed = RawRowSchema.safeParse({
+          age: account.age,
+          pledgeCurrent,
+          pledgePrior,
+          zipCode: account.zipCode,
         });
-        continue;
-      }
 
-      rows.push(parsed.data);
+        if (parsed.success) {
+          rows.push(parsed.data);
+        }
+      }
     }
 
     return {
       rows,
       errors,
       yearsFound,
-      accountCount: accountData.size,
+      accountCount: simplifiedAccountData.size,
       hasNegativeValues,
+      accountData: simplifiedAccountData,
     };
   } catch (error) {
     errors.push({
       row: 0,
       message: `Failed to parse file: ${error instanceof Error ? error.message : String(error)}`,
     });
-    return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues: false };
+    return { rows, errors, yearsFound: [], accountCount: 0, hasNegativeValues: false, accountData: new Map() };
   }
+}
+
+/**
+ * Combine multiple ShulCloud parse results into final rows.
+ * This handles the case where different files contain different fiscal years.
+ */
+export function combineShulCloudResults(results: ShulCloudParseResult[]): {
+  rows: RawRow[];
+  allYears: number[];
+  totalAccounts: number;
+  hasNegativeValues: boolean;
+  error?: string;
+} {
+  // Collect all years across all files
+  const allYearsSet = new Set<number>();
+  for (const result of results) {
+    for (const year of result.yearsFound) {
+      allYearsSet.add(year);
+    }
+  }
+  const allYears = Array.from(allYearsSet).sort((a, b) => b - a); // Descending
+
+  // Check 2-year requirement
+  if (allYears.length < 2) {
+    return {
+      rows: [],
+      allYears,
+      totalAccounts: 0,
+      hasNegativeValues: false,
+      error: allYears.length === 0
+        ? "No fiscal years found in the imported files."
+        : `Only 1 fiscal year found (${allYears[0]}). Import files containing at least 2 fiscal years for year-to-year comparisons.`,
+    };
+  }
+
+  const currentYear = allYears[0];
+  const priorYear = allYears[1];
+
+  // Merge account data across all files
+  const mergedAccounts = new Map<string, { yearAmounts: Map<number, number>; age: number; zipCode?: string }>();
+
+  for (const result of results) {
+    for (const [accountId, account] of result.accountData) {
+      const existing = mergedAccounts.get(accountId);
+      if (existing) {
+        // Merge year amounts
+        for (const [year, amount] of account.yearAmounts) {
+          const existingAmount = existing.yearAmounts.get(year) ?? 0;
+          existing.yearAmounts.set(year, existingAmount + amount);
+        }
+      } else {
+        // Clone the account data
+        mergedAccounts.set(accountId, {
+          yearAmounts: new Map(account.yearAmounts),
+          age: account.age,
+          zipCode: account.zipCode,
+        });
+      }
+    }
+  }
+
+  // Build final rows
+  const rows: RawRow[] = [];
+  for (const [, account] of mergedAccounts) {
+    const pledgeCurrent = account.yearAmounts.get(currentYear) ?? 0;
+    const pledgePrior = account.yearAmounts.get(priorYear) ?? 0;
+
+    const parsed = RawRowSchema.safeParse({
+      age: account.age,
+      pledgeCurrent,
+      pledgePrior,
+      zipCode: account.zipCode,
+    });
+
+    if (parsed.success) {
+      rows.push(parsed.data);
+    }
+  }
+
+  return {
+    rows,
+    allYears,
+    totalAccounts: mergedAccounts.size,
+    hasNegativeValues: results.some((r) => r.hasNegativeValues),
+  };
 }
 
 /**

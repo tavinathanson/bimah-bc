@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectShulCloudFormat, parseShulCloudFile } from "./shulcloud-parser";
+import { detectShulCloudFormat, parseShulCloudFile, combineShulCloudResults } from "./shulcloud-parser";
 
 // Helper to create a File with arrayBuffer support (jsdom doesn't fully implement it)
 function createTestFile(content: string, name = "test.csv"): File {
@@ -144,7 +144,7 @@ Hineini 24,$1800.00,ACC002,1975-06-20,07030`;
     expect(acc002?.pledgePrior).toBe(1800);
   });
 
-  it("handles completely negative net amount", async () => {
+  it("handles completely negative net amount (caught at Zod validation)", async () => {
     const csv = `Type,Charge,Account ID,Primary's Birthday,Zip
 Hineini 25,$100.00,ACC001,1980-01-15,07030
 Hineini 25,($500.00),ACC001,1980-01-15,07030
@@ -153,12 +153,13 @@ Hineini 24,$200.00,ACC001,1980-01-15,07030`;
     const file = createTestFile(csv);
     const result = await parseShulCloudFile(file);
 
-    // Should error because pledgeCurrent would be negative (-400)
-    // which fails the nonnegative() validation
-    expect(result.errors.length).toBeGreaterThan(0);
+    // The row is built with pledgeCurrent = -400, which fails Zod nonnegative validation
+    // So the row won't be included in the result
+    expect(result.rows.length).toBe(0);
+    expect(result.hasNegativeValues).toBe(true);
   });
 
-  it("requires at least 2 fiscal years", async () => {
+  it("single file with 1 fiscal year - validation deferred to combine step", async () => {
     const csv = `Type,Charge,Account ID,Primary's Birthday,Zip
 Hineini 25,$1000.00,ACC001,1980-01-15,07030
 Hineini 25,$500.00,ACC002,1975-06-20,07030`;
@@ -166,9 +167,13 @@ Hineini 25,$500.00,ACC002,1975-06-20,07030`;
     const file = createTestFile(csv);
     const result = await parseShulCloudFile(file);
 
-    expect(result.errors.length).toBeGreaterThan(0);
-    expect(result.errors[0].message).toContain("At least 2 years");
+    // Single file with 1 year should NOT error at parse time
+    // (validation happens at combine step when multiple files are merged)
+    expect(result.errors).toHaveLength(0);
     expect(result.yearsFound).toEqual([2025]);
+    expect(result.accountData.size).toBe(2);
+    // Rows are empty because we need 2 years to build pledgeCurrent/pledgePrior
+    expect(result.rows).toHaveLength(0);
   });
 
   it("filters for hineini transactions only", async () => {
@@ -211,5 +216,76 @@ Hineini 24,$800.00,ACC001,1980-01-15,07030`;
 
     expect(result.errors.length).toBeGreaterThan(0);
     expect(result.errors[0].message).toContain("missing fiscal year");
+  });
+});
+
+describe("combineShulCloudResults - multi-file imports", () => {
+  it("combines two files with different fiscal years", async () => {
+    const csv25 = `Type,Charge,Account ID,Primary's Birthday,Zip
+Hineini 25 FAKE,$1000.00,ACC001,1980-01-15,07030
+Hineini 25 FAKE,$500.00,ACC002,1975-06-20,07030`;
+
+    const csv26 = `Type,Charge,Account ID,Primary's Birthday,Zip
+Hineini 26 FAKE,$1200.00,ACC001,1980-01-15,07030
+Hineini 26 FAKE,$600.00,ACC002,1975-06-20,07030`;
+
+    const result25 = await parseShulCloudFile(createTestFile(csv25));
+    const result26 = await parseShulCloudFile(createTestFile(csv26));
+
+    const combined = combineShulCloudResults([result25, result26]);
+
+    expect(combined.error).toBeUndefined();
+    expect(combined.allYears).toEqual([2026, 2025]);
+    expect(combined.totalAccounts).toBe(2);
+    expect(combined.rows).toHaveLength(2);
+
+    // Find ACC001's row
+    const acc001 = combined.rows.find((r) => r.pledgeCurrent === 1200);
+    expect(acc001).toBeDefined();
+    expect(acc001?.pledgePrior).toBe(1000);
+
+    // Find ACC002's row
+    const acc002 = combined.rows.find((r) => r.pledgeCurrent === 600);
+    expect(acc002).toBeDefined();
+    expect(acc002?.pledgePrior).toBe(500);
+  });
+
+  it("errors when combined files have only 1 fiscal year", async () => {
+    const csv25a = `Type,Charge,Account ID,Primary's Birthday,Zip
+Hineini 25 FAKE,$1000.00,ACC001,1980-01-15,07030`;
+
+    const csv25b = `Type,Charge,Account ID,Primary's Birthday,Zip
+Hineini 25 FAKE,$500.00,ACC002,1975-06-20,07030`;
+
+    const result25a = await parseShulCloudFile(createTestFile(csv25a));
+    const result25b = await parseShulCloudFile(createTestFile(csv25b));
+
+    const combined = combineShulCloudResults([result25a, result25b]);
+
+    expect(combined.error).toBeDefined();
+    expect(combined.error).toContain("Only 1 fiscal year found");
+    expect(combined.rows).toHaveLength(0);
+  });
+
+  it("merges transactions for same account across files", async () => {
+    // Same account appears in both files with same year - amounts should sum
+    const csv1 = `Type,Charge,Account ID,Primary's Birthday,Zip
+Hineini 25 FAKE,$500.00,ACC001,1980-01-15,07030
+Hineini 26 FAKE,$600.00,ACC001,1980-01-15,07030`;
+
+    const csv2 = `Type,Charge,Account ID,Primary's Birthday,Zip
+Hineini 25 FAKE,$300.00,ACC001,1980-01-15,07030
+Hineini 26 FAKE,$400.00,ACC001,1980-01-15,07030`;
+
+    const result1 = await parseShulCloudFile(createTestFile(csv1));
+    const result2 = await parseShulCloudFile(createTestFile(csv2));
+
+    const combined = combineShulCloudResults([result1, result2]);
+
+    expect(combined.error).toBeUndefined();
+    expect(combined.totalAccounts).toBe(1);
+    expect(combined.rows).toHaveLength(1);
+    expect(combined.rows[0].pledgeCurrent).toBe(1000); // 600 + 400
+    expect(combined.rows[0].pledgePrior).toBe(800); // 500 + 300
   });
 });

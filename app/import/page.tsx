@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { getFileHeaders, parseFile, previewFile, guessColumnMapping } from "@/lib/parsing/parser";
-import { detectShulCloudFormat, parseShulCloudFile, type ShulCloudDetectionResult, type ShulCloudParseResult } from "@/lib/parsing/shulcloud-parser";
+import { detectShulCloudFormat, parseShulCloudFile, combineShulCloudResults, type ShulCloudDetectionResult, type ShulCloudParseResult } from "@/lib/parsing/shulcloud-parser";
 import type { ColumnMapping, ParsedFile, ImportFormat } from "@/lib/schema/types";
 import { enrichRows } from "@/lib/math/calculations";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
@@ -245,11 +245,30 @@ export default function UploadPage() {
 
   const handleContinue = () => {
     // Combine all validated files and store in sessionStorage
-    const validatedFiles = files.filter((f) => f.status === "validated" && f.parsed);
+    const validatedFiles = files.filter((f) => f.status === "validated" || (f.status === "error" && f.shulcloudResult && f.shulcloudResult.errors.length === 0));
 
-    const allRows = validatedFiles.flatMap((f) =>
-      enrichRows(f.file.name, f.parsed!.rows)
-    );
+    let allRows;
+
+    if (importFormat === "shulcloud") {
+      // For ShulCloud, combine results across all files
+      const shulcloudResults = validatedFiles
+        .map((f) => f.shulcloudResult)
+        .filter((r): r is ShulCloudParseResult => r !== undefined);
+
+      const combined = combineShulCloudResults(shulcloudResults);
+
+      if (combined.error) {
+        alert(combined.error);
+        return;
+      }
+
+      allRows = enrichRows("ShulCloud Import", combined.rows);
+    } else {
+      // Standard import
+      allRows = validatedFiles.flatMap((f) =>
+        enrichRows(f.file.name, f.parsed!.rows)
+      );
+    }
 
     sessionStorage.setItem("pledgeData", JSON.stringify(allRows));
     // Clear saved filters when new data is imported
@@ -270,6 +289,20 @@ export default function UploadPage() {
   const currentFile = currentFileIndex !== null ? files[currentFileIndex] : null;
   const allValidated = files.length > 0 && files.every((f) => f.status === "validated");
 
+  // For ShulCloud: compute combined validation across all files
+  const shulcloudCombined = importFormat === "shulcloud" && files.length > 0
+    ? (() => {
+        const results = files
+          .map((f) => f.shulcloudResult)
+          .filter((r): r is ShulCloudParseResult => r !== undefined);
+        if (results.length === 0) return null;
+        return combineShulCloudResults(results);
+      })()
+    : null;
+
+  const shulcloudReady = shulcloudCombined && !shulcloudCombined.error && shulcloudCombined.rows.length > 0;
+  const canContinue = importFormat === "shulcloud" ? shulcloudReady : allValidated;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-5 md:space-y-6">
@@ -287,17 +320,23 @@ export default function UploadPage() {
           </div>
         </div>
 
-        {/* Format Confirmation Dialog */}
-        {showFormatConfirmation && formatDetection && (
-          <Card className="border-2 border-blue-300 shadow-lg bg-blue-50/50">
+        {/* Recent Dashboards */}
+        <RecentDashboards />
+
+        {files.length === 0 ? (
+          /* Format Confirmation Dialog - replaces drag & drop when detected */
+          showFormatConfirmation && formatDetection ? (
+          <Card className="border-0 shadow-lg shadow-blue-100/50 bg-white/70 backdrop-blur-sm">
             <CardContent className="p-6">
               {formatDetection.confidence === "high" ? (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div className="flex items-start gap-3">
-                    <FileSpreadsheet className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <FileSpreadsheet className="h-6 w-6 text-blue-600" />
+                    </div>
                     <div>
-                      <h3 className="font-semibold text-lg text-blue-900">ShulCloud Transactions Export Detected</h3>
-                      <p className="text-sm text-blue-800 mt-1">
+                      <h3 className="font-semibold text-lg text-slate-900">ShulCloud Transactions Export Detected</h3>
+                      <p className="text-sm text-slate-600 mt-1">
                         This file looks like a ShulCloud Transactions export. We&apos;ll automatically extract Hineini pledges and group them by account.
                       </p>
                     </div>
@@ -312,15 +351,17 @@ export default function UploadPage() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="p-2 bg-amber-100 rounded-lg">
+                      <AlertCircle className="h-6 w-6 text-amber-600" />
+                    </div>
                     <div>
-                      <h3 className="font-semibold text-lg text-amber-900">Partial ShulCloud Match</h3>
-                      <p className="text-sm text-amber-800 mt-1">
+                      <h3 className="font-semibold text-lg text-slate-900">Partial ShulCloud Match</h3>
+                      <p className="text-sm text-slate-600 mt-1">
                         This file looks similar to a ShulCloud export but is missing some expected columns:
                       </p>
-                      <ul className="text-sm text-amber-800 mt-2 list-disc list-inside">
+                      <ul className="text-sm text-slate-600 mt-2 list-disc list-inside">
                         {formatDetection.missingColumns.map((col) => (
                           <li key={col}>{col}</li>
                         ))}
@@ -339,12 +380,7 @@ export default function UploadPage() {
               )}
             </CardContent>
           </Card>
-        )}
-
-        {/* Recent Dashboards */}
-        <RecentDashboards />
-
-        {files.length === 0 ? (
+        ) : (
           <Card className="border-0 shadow-lg shadow-blue-100/50 bg-white/70 backdrop-blur-sm">
             <CardContent className="p-6 space-y-4">
               <div
@@ -393,7 +429,7 @@ export default function UploadPage() {
               </div>
             </CardContent>
           </Card>
-        ) : (
+        )) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -427,12 +463,19 @@ export default function UploadPage() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">{f.file.name}</div>
                       <div className="flex items-center gap-1.5 mt-1">
-                        {f.status === "validated" && (
+                        {f.status === "validated" && importFormat === "shulcloud" && f.shulcloudResult?.yearsFound.length === 1 ? (
+                          <>
+                            <svg className="h-3.5 w-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="text-xs text-amber-600">FY{f.shulcloudResult.yearsFound[0]} only</span>
+                          </>
+                        ) : f.status === "validated" ? (
                           <>
                             <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                            <span className="text-xs text-green-600">Validated</span>
+                            <span className="text-xs text-green-600">Ready</span>
                           </>
-                        )}
+                        ) : null}
                         {f.status === "error" && (
                           <>
                             <AlertCircle className="h-3.5 w-3.5 text-destructive" />
@@ -447,14 +490,79 @@ export default function UploadPage() {
                   </div>
                 </button>
               ))}
-              <div
-                {...getRootProps()}
-                className="border-2 border-dashed rounded-xl p-4 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 border-slate-300"
-              >
-                <input {...getInputProps()} />
-                <Upload className="mx-auto h-6 w-6 text-muted-foreground mb-1" />
-                <p className="text-xs text-muted-foreground">Add more files</p>
-              </div>
+              {/* Add more files - smaller when we have combined status */}
+              {!(importFormat === "shulcloud" && shulcloudCombined) && (
+                <div
+                  {...getRootProps()}
+                  className="border-2 border-dashed rounded-xl p-4 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 border-slate-300"
+                >
+                  <input {...getInputProps()} />
+                  <Upload className="mx-auto h-6 w-6 text-muted-foreground mb-1" />
+                  <p className="text-xs text-muted-foreground">Add more files</p>
+                </div>
+              )}
+
+              {/* ShulCloud Combined Status - in sidebar */}
+              {importFormat === "shulcloud" && shulcloudCombined && (
+                <div className="space-y-2 pt-2">
+                  {shulcloudCombined.error ? (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-amber-900 text-sm">
+                          <strong className="block">Need Another Year</strong>
+                          <p className="text-xs mt-1 text-amber-800">
+                            {shulcloudCombined.allYears.length === 1
+                              ? `Only FY${shulcloudCombined.allYears[0]} found`
+                              : "Need 2 fiscal years"
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <div {...getRootProps()} className="mt-3">
+                        <input {...getInputProps()} />
+                        <Button variant="outline" size="sm" className="w-full text-xs">
+                          <Upload className="h-3 w-3 mr-1.5" />
+                          Add Another File
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-green-900 text-sm">
+                          <strong className="block">Ready to Analyze</strong>
+                          <p className="text-xs mt-1 text-green-800">
+                            {shulcloudCombined.totalAccounts} households
+                            <br />
+                            FY{shulcloudCombined.allYears.join(" & FY")}
+                          </p>
+                        </div>
+                      </div>
+                      <Button onClick={handleContinue} size="sm" className="w-full mt-3 text-xs bg-[#1886d9] hover:bg-[#0e69bb]">
+                        Continue to Dashboard →
+                      </Button>
+                      <div {...getRootProps()} className="mt-2">
+                        <input {...getInputProps()} />
+                        <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
+                          <Upload className="h-3 w-3 mr-1.5" />
+                          Add more files
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Standard Import - Continue button in sidebar */}
+              {importFormat === "standard" && allValidated && (
+                <div className="pt-2">
+                  <Button onClick={handleContinue} size="sm" className="w-full text-xs bg-[#1886d9] hover:bg-[#0e69bb]">
+                    Continue to Dashboard →
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="lg:col-span-3">
@@ -473,34 +581,43 @@ export default function UploadPage() {
                   <CardContent className="space-y-4 md:space-y-6">
                     {/* ShulCloud Mode - Show status info */}
                     {importFormat === "shulcloud" && currentFile.shulcloudResult && (
-                      <div className="space-y-4">
-                        {/* Years found info */}
-                        {currentFile.shulcloudResult.yearsFound.length > 0 && (
-                          <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                            <FileSpreadsheet className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                            <div className="text-blue-900">
-                              <strong>Fiscal years found:</strong> {currentFile.shulcloudResult.yearsFound.join(", ")}
-                              {currentFile.shulcloudResult.yearsFound.length >= 2 && (
+                      <div className="space-y-3">
+                        {/* Single year case - needs more data */}
+                        {currentFile.shulcloudResult.yearsFound.length === 1 && currentFile.shulcloudResult.accountCount > 0 && (
+                          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-amber-900">
+                              <strong>Found {currentFile.shulcloudResult.accountCount} accounts</strong> with Hineini pledges for FY{currentFile.shulcloudResult.yearsFound[0]}
+                              <p className="mt-1 text-amber-800">
+                                To compare year-to-year, add another file containing a different fiscal year.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Multiple years in this file - show success */}
+                        {currentFile.shulcloudResult.yearsFound.length >= 2 && currentFile.shulcloudResult.errors.length === 0 && (
+                          <>
+                            <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                              <FileSpreadsheet className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                              <div className="text-blue-900">
+                                <strong>Fiscal years found:</strong> {currentFile.shulcloudResult.yearsFound.join(", ")}
                                 <span className="text-blue-700 ml-2">
                                   (Using {currentFile.shulcloudResult.yearsFound[0]} as current, {currentFile.shulcloudResult.yearsFound[1]} as prior)
                                 </span>
-                              )}
+                              </div>
                             </div>
-                          </div>
+                            <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+                              <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                              <div className="text-green-900">
+                                <strong>{currentFile.shulcloudResult.rows.length} households</strong> ready to analyze from {currentFile.shulcloudResult.accountCount} accounts
+                              </div>
+                            </div>
+                          </>
                         )}
 
-                        {/* Account count */}
+                        {/* Summing explanation - show when we have account data */}
                         {currentFile.shulcloudResult.accountCount > 0 && currentFile.shulcloudResult.errors.length === 0 && (
-                          <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
-                            <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                            <div className="text-green-900">
-                              <strong>{currentFile.shulcloudResult.rows.length} households</strong> extracted from {currentFile.shulcloudResult.accountCount} accounts
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Summing explanation - always show when we have results */}
-                        {currentFile.shulcloudResult.rows.length > 0 && (
                           <div className="flex items-start gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm">
                             <svg className="h-4 w-4 text-slate-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -610,7 +727,8 @@ export default function UploadPage() {
                     </div>
                     )}
 
-                    {currentFile.parsed && (
+                    {/* Standard Mode - Show validation results */}
+                    {importFormat !== "shulcloud" && currentFile.parsed && (
                       <div className="space-y-4">
                         {currentFile.parsed.errors.length > 0 ? (
                           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
@@ -634,27 +752,42 @@ export default function UploadPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="space-y-4">
-                            <div className="rounded-lg border border-green-500/50 bg-green-500/10 p-4">
-                              <div className="flex items-center gap-2">
-                                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                <h3 className="font-semibold text-green-600">
-                                  File validated successfully
-                                </h3>
-                              </div>
-                              <p className="text-sm mt-1">
-                                {currentFile.parsed.rows.length} rows parsed
-                              </p>
+                          <div className="rounded-lg border border-green-500/50 bg-green-500/10 p-4">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="h-5 w-5 text-green-600" />
+                              <h3 className="font-semibold text-green-600">
+                                File validated successfully
+                              </h3>
                             </div>
-                            {allValidated && (
-                              <div className="flex justify-end">
-                                <Button onClick={handleContinue} size="lg" className="w-full sm:w-auto bg-[#1886d9] hover:bg-[#0e69bb] text-white rounded-lg">
-                                  Continue to Dashboard →
-                                </Button>
-                              </div>
-                            )}
+                            <p className="text-sm mt-1">
+                              {currentFile.parsed.rows.length} rows parsed
+                            </p>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* ShulCloud Mode - Show errors if any */}
+                    {importFormat === "shulcloud" && currentFile.shulcloudResult && currentFile.shulcloudResult.errors.length > 0 && (
+                      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertCircle className="h-5 w-5 text-destructive" />
+                          <h3 className="font-semibold text-destructive">
+                            Parsing Errors ({currentFile.shulcloudResult.errors.length})
+                          </h3>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          {currentFile.shulcloudResult.errors.slice(0, 10).map((err, idx) => (
+                            <div key={idx}>
+                              {err.row > 0 ? `Row ${err.row}: ` : ""}{err.message}
+                            </div>
+                          ))}
+                          {currentFile.shulcloudResult.errors.length > 10 && (
+                            <div className="text-muted-foreground italic">
+                              ...and {currentFile.shulcloudResult.errors.length - 10} more errors
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -717,10 +850,50 @@ export default function UploadPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Bottom action bar - secondary location for key actions */}
+                    {importFormat === "shulcloud" && shulcloudCombined && (
+                      <div className="pt-4 border-t">
+                        {shulcloudCombined.error ? (
+                          <div className="flex items-center justify-between gap-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                            <div className="text-amber-900 text-sm">
+                              <strong>Need another fiscal year</strong> to enable year-to-year comparisons
+                            </div>
+                            <div {...getRootProps()}>
+                              <input {...getInputProps()} />
+                              <Button size="lg" className="bg-[#1886d9] hover:bg-[#0e69bb]">
+                                <Upload className="h-4 w-4 mr-2" />
+                                Add Another File
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="text-green-900 text-sm">
+                              <strong>{shulcloudCombined.totalAccounts} households</strong> ready across FY{shulcloudCombined.allYears.join(" & FY")}
+                            </div>
+                            <Button onClick={handleContinue} size="lg" className="bg-[#1886d9] hover:bg-[#0e69bb]">
+                              Continue to Dashboard →
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {importFormat === "standard" && allValidated && (
+                      <div className="pt-4 border-t">
+                        <div className="flex justify-end">
+                          <Button onClick={handleContinue} size="lg" className="bg-[#1886d9] hover:bg-[#0e69bb]">
+                            Continue to Dashboard →
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
             </div>
+
           </div>
         )}
       </div>
